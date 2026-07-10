@@ -9,6 +9,9 @@ __pycache__/
 # Environment files
 .env
 .env.*
+# But always track the example template (it contains no real secrets)
+!.env.example
+!**/.env.example
 # OS files
 Thumbs.db
 .DS_Store
