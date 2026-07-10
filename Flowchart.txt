@@ -1,0 +1,128 @@
+
+WEB APPLICATION ARCHITECTURE & SPECIFICATION 
+==============================================
+
+Architecture Model: Decoupled client-server consisting of:
+	- React.js Frontend 
+	- Node.js & Express REST API Backend 
+	- SQLite Database (info.db)
+	- Python Flask OCR & Ollama Triage Service 
+
+
+Core Stakeholders:
+	- Patient (User)
+	- Doctor (Practitioner)
+	- Pharmacy Store (Vendor)
+	- Platform Administrator (Admin)
+
+Workflow:
+===========
+
+1. User Registration and Login
+
+   	- Stakeholders register using the custom signup panels. Patients input their Age and Gender.
+
+   	- Doctors and Vendors default to a "pending" accreditation state.
+
+   	- Admin logs in with default credentials to review and accredit doctors and vendors.
+
+   	- Patient Login OTP Validation:
+     		- User submits username and password.
+     		- If credentials match, backend generates a random 6-digit OTP.
+     		- Backend delivers the OTP to patient's email via EmailJS client service.
+     		- A glassmorphic modal prompts for OTP entry with a 30s resend cooldown.
+     		- Valid OTP entry completes session and directs patient to dashboard.
+
+2. AI Diagnostic Triage Flow
+
+   	- Patient inputs symptoms in chat OR uploads a clinical report (PDF/Image).
+
+   	- Document Processing (if uploaded):
+     		- PDF/Image payload is POSTed to Flask OCR service.
+     		- PyPDF parses textual PDF pages. Tesseract OCR parses images locally.
+     		- Extracted text is returned to the frontend.
+
+   	- AI Triage Engine:
+     		- Text query is sent to Flask.
+     		- Flask queries local Ollama model (gemma3:1b) to analyze symptoms.
+     		- Gemma returns a JSON block containing the specialty classification and a short explanation.
+
+   	- Match Specialists:
+     		- Frontend sets suggested specialization and filters the accredited doctor directory to list matched specialists.
+     		- Each doctor card displays clinic timing, address, and consultation availability (in-clinic / online).
+
+3. Scheduling & Escrow Payment Flow
+
+   	- Slot Booking Lease-Lock:
+     		- Patient selects a time slot from the verified practitioners directory.
+     		- Booking modal shows practitioner details, slot timing, fee, and clinic information (timing, address, consultation type).
+     		- Patient must provide at least one of: written symptoms OR an uploaded medical report (PDF/Image), or both.
+     		- Optional medical report is uploaded via Multer and saved to backend/uploads/medical_reports/.
+     		- Report file path is stored in appointments.medicalReportPath in the database.
+     		- Backend initiates a pessimistic database transaction.
+     		- Lock holds the slot in a pending state for a 10-minute lease.
+     		- A background cleaner thread runs every 30 seconds to release unpaid locks older than 10 minutes.
+
+   	- Appointment Vetting (Doctor Side):
+     		- Doctor reviews pending requests in the Appointment Vetting & Approval Desk.
+     		- Doctor can view reported symptoms and open uploaded medical reports from the appointments table.
+     		- Doctor approves or cancels the booking request.
+     		- Cancel Booking is disabled after a prescription has been issued for that appointment.
+
+   	- Appointment Confirmation Email (on Doctor Approval):
+     		- When the doctor approves an appointment, the backend returns patient email, clinic details, and a live consultation link(Dummy).
+     		- Frontend sends a confirmation email to the patient via EmailJS .
+     		- Email includes: patient name, doctor name, appointment date, appointment time, dummy meeting link, and support contact.
+
+   	- Consultation Fee Escrow:
+     		- Patient clicks pay to settle consultation fees.
+     		- Lock status turns to paid and the appointment is secured.
+
+   	- Practitioner Payout:
+     		- Specialist conducts consult and submits clinical prescription.
+     		- Node.js server releases 100% of escrow fee directly to the doctor's wallet balance.
+
+4. Prescription Cart & Split-Payment Checkout
+
+   	- Fulfill & Price Compare Engine:
+     		- Patient views active prescription cards and clicks "Fulfill & Compare Prices".
+     		- System auto-carts the SKU(Stock Keeping Unit) and redirects to the store search.
+     		- Inventory index lists matched SKU(Stock Keeping Unit)s side-by-side, sorted cheapest first.
+
+   	- Split-Checkout Loop:
+     		- Patient submits checkout address and confirms cart.
+     		- System splits checkout amounts: deducts 10% platform commission, and routes 90% payout to the vendor's wallet balance.
+     		- Vendor dashboard updates order dispatch status.
+     		- Admin monitors commission earnings and wallet balances in real-time.
+
+5. Clinic Details Management (Doctor Dashboard)
+
+   	- Doctor configures clinic profile on Dashboard Overview:
+     		- Clinic timing
+     		- Clinic address / location
+     		- Consultation availability 
+   	- Saved clinic details are visible to patients in the practitioner directory and booking modal for offline visit planning.
+
+6. Doctor–Patient Chat Flow
+
+   	- Chat Access Rules:
+     		- Chat is unlocked only after appointment is approved AND payment is successful.
+     		- Doctor sees paid patients under "Your Patients" in the Patient Chat tab.
+     		- Patient sees eligible doctors under "Your Doctors" in the Doctor Chat tab.
+
+   	- Consultation Context Panel (on opening a chat):
+     		- Fresh chat: displays appointment slot, reported symptoms, and a View Medical Report link (if uploaded).
+     		- Existing chat: same consultation reference panel 
+
+   	- Messaging:
+     		- Messages are stored in the messages table (doctorUsername, patientUsername, senderRole, message, createdAt).
+     		- Both doctor and patient can send text messages in a one-to-one thread.
+
+
+
+NOTE: 
+1. We used a static payment method instead of a payment gateway API because payment APIs require a live server and proper merchant account configuration, which cannot be fully implemented and tested in a local development environment
+
+2. Live video calling (WebRTC) is not implemented. On appointment approval, a dummy consultation meeting link is emailed to the patient via EmailJS to simulate online consultation scheduling. Real-time video requires HTTPS and production WebRTC infrastructure not available in local development.
+
+3. Medical report files are stored locally on the server and served via the Express static file route.

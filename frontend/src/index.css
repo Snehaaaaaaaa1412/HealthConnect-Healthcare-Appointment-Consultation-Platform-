@@ -1,0 +1,220 @@
+/* Design Tokens & Theme Variables */
+:root {
+  --bg-primary: #FAF9F6;
+  /* Luxurious warm alabaster/cream-white */
+  --bg-secondary: #F2F1EC;
+  /* Soft warm stone grey */
+  --text-primary: #1C1917;
+  /* Deep charcoal stone for legibility */
+  --text-secondary: #57534E;
+  /* Medium stone grey for metadata */
+
+  --primary: #7a4dbe;
+  /* Majestic Imperial Purple (Primary Brand) */
+  --primary-hover: #3B0764;
+  /* Rich Darker Purple for active states */
+  --primary-light: #F5F3FF;
+  /* Softest lilac background */
+
+  --accent-crimson: #BE123C;
+  /* Clinical Crimson/Rose (Secondary/Health Brand) */
+  --accent-crimson-hover: #9F1239;
+  /* Darker Burgundy on hover */
+  --accent-crimson-light: #FFF1F2;
+  /* Very soft red glow background */
+
+  --accent-bronze: #B45309;
+  /* Rich Bronze/Amber (Alerts / Vetting States) */
+  --accent-bronze-light: #FEF3C7;
+  /* Soft amber background */
+
+  --border-color: #E7E5E4;
+  /* Polished warm stone border */
+  --card-bg: #FFFFFF;
+  /* Ultra-clean white cards */
+
+  --shadow-sm: 0 1px 3px rgba(28, 25, 23, 0.05);
+  --shadow-md: 0 4px 12px rgba(28, 25, 23, 0.06), 0 2px 4px rgba(28, 25, 23, 0.03);
+  --shadow-lg: 0 16px 32px rgba(28, 25, 23, 0.08), 0 4px 8px rgba(28, 25, 23, 0.04);
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 24px;
+
+  --font-sans: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Global Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Common Interactive Styles */
+a,
+button {
+  font-family: var(--font-sans);
+}
+
+/* Premium Form Elements */
+input,
+select,
+textarea {
+  font-family: var(--font-sans);
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  transition: var(--transition-smooth);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(76, 29, 149, 0.1);
+}
+
+/* Form Helper Typography */
+label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+}
+
+/* Clean Solid Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.75rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--border-color);
+  transform: translateY(-1px);
+}
+
+.btn-crimson {
+  background-color: var(--accent-crimson);
+  color: white;
+}
+
+.btn-crimson:hover:not(:disabled) {
+  background-color: var(--accent-crimson-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Premium Card Components */
+.card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+  transition: var(--transition-smooth);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Badges for Status/Roles */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.badge-pending {
+  background-color: var(--accent-bronze-light);
+  color: var(--accent-bronze);
+  border: 1px solid rgba(180, 83, 9, 0.2);
+}
+
+.badge-approved {
+  background-color: var(--accent-crimson-light);
+  color: var(--accent-crimson);
+  border: 1px solid rgba(190, 18, 62, 0.2);
+}
+
+/* Micro-Animations & Hover Effects */
+.scale-hover {
+  transition: var(--transition-smooth);
+}
+
+.scale-hover:hover {
+  transform: translateY(-4px);
+}

@@ -1,0 +1,8 @@
+
+DownloaD Ollama from https://ollama.com/download/windows
+
+1. Install Ollama (Ollama Setup.exe).
+2. open comand prompt.
+3. ollama pull gemma3:1b.
+4. ollama run gemma3:1b.
+5. Send a message (Hi or Hello) to check if the model installed or not.
