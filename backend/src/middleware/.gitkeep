@@ -1,0 +1,17 @@
+# Middleware Layer
+#
+# Contains Express middleware functions:
+#   authMiddleware.js    — protect() : validates JWT, attaches req.user
+#                        — restrictTo(...roles) : role-based access control
+#   errorMiddleware.js   — Global (err, req, res, next) error handler
+#   uploadMiddleware.js  — Multer configuration for medical report uploads
+#   validate.js          — Runs express-validator result, propagates ApiError on failure
+#
+# Rule: Middleware functions receive (req, res, next) and:
+#   - Either transform req (auth) or intercept and respond (validation, errors)
+#   - Call next() to pass to the next handler, or next(err) to skip to error handler
+#   - Never contain business logic
+#
+# Populated in: Milestone 15 (Middleware — Auth & Authorization)
+#               Milestone 11 (Input Validation)
+#               Milestone 9  (Centralized Error Handling)

@@ -1,0 +1,19 @@
+# Validators Layer
+#
+# Contains express-validator validation chain arrays, one file per domain:
+#   authValidators.js         — register, login input rules
+#   appointmentValidators.js  — book appointment, issue prescription rules
+#   orderValidators.js        — create order rules
+#   chatValidators.js         — send message rules
+#
+# Pattern:
+#   const { body } = require("express-validator");
+#   exports.registerRules = [
+#     body("email").isEmail().withMessage("Invalid email format"),
+#     body("password").isLength({ min: 8 }).withMessage("Min 8 characters"),
+#   ];
+#
+# These arrays are composed directly into route definitions:
+#   router.post("/register", registerRules, validate, authController.register);
+#
+# Populated in: Milestone 11 (Input Validation)

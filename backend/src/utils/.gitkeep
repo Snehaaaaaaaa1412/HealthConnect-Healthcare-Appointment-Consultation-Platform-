@@ -1,0 +1,17 @@
+# Utils Layer
+#
+# Contains shared utility classes and helpers:
+#   ApiResponse.js   — Standardized response envelope factory
+#                      ApiResponse.success(data, message, statusCode)
+#                      ApiResponse.error(message, statusCode, errorCode)
+#   ApiError.js      — Custom Error subclass with statusCode, errorCode, isOperational
+#                      Subclasses: ValidationError, AuthenticationError,
+#                                  NotFoundError, ConflictError
+#   asyncHandler.js  — Wraps async route handlers to forward unhandled
+#                      promise rejections to Express error middleware via next(err)
+#
+# Rule: Utils are pure, stateless, framework-agnostic helpers.
+#       They must have zero side effects and zero external dependencies.
+#
+# Populated in: Milestone 10 (API Response Standardization)
+#               Milestone 9  (Centralized Error Handling)

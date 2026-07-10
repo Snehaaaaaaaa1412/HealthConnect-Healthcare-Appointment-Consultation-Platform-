@@ -1,14 +1,19 @@
-const express = require("express");
+/**
+ * Server Bootstrap
+ *
+ * Responsibilities:
+ *   - Load the configured Express application from app.js
+ *   - Initialize the SQLite database and schema
+ *   - Register routes (to be migrated to src/routes/ in Milestone 8)
+ *   - Start the HTTP listener
+ *
+ * Express configuration (middleware, CORS, static files) lives in app.js.
+ */
+const app = require("./app");
 const sqlite3 = require("sqlite3").verbose();
-const cors = require("cors");
-const bodyParser = require("body-parser");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
 
 // Medical report uploads directory
 const reportsDir = path.join(__dirname, "uploads", "medical_reports");
@@ -35,7 +40,7 @@ const upload = multer({
   }
 });
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Static file serving for /uploads is configured in app.js
 
 // Connect to info.db instead of users.db
 const db = new sqlite3.Database("info.db");

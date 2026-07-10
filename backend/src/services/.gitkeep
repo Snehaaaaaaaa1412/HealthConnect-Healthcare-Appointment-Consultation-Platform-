@@ -1,0 +1,20 @@
+# Services Layer
+#
+# Contains business logic, one file per domain:
+#   authService.js         — credential validation, OTP management
+#   adminService.js        — statistics, approvals
+#   doctorService.js       — slot management, clinic profiles
+#   vendorService.js       — inventory management
+#   appointmentService.js  — booking with pessimistic locking, escrow payout
+#   orderService.js        — order placement with split-payment logic
+#   chatService.js         — message persistence
+#   emailService.js        — nodemailer SMTP email delivery
+#   otpService.js          — OTP generation, TTL-based storage, verification
+#
+# Rule: Services must:
+#   - Orchestrate one or more repository calls
+#   - Enforce all business rules (e.g., "slot must be available", "fee >= 0")
+#   - Throw ApiError for rule violations
+#   - Never touch req or res objects
+#
+# Populated in: Milestone 6 (Services)

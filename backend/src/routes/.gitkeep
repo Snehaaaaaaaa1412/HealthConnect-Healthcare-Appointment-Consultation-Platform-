@@ -1,0 +1,17 @@
+# Routes Layer
+#
+# Contains Express Router modules, one per domain:
+#   authRoutes.js         — /register, /login, /auth/*
+#   adminRoutes.js        — /admin/*
+#   doctorRoutes.js       — /doctors/*
+#   vendorRoutes.js       — /vendors/*
+#   appointmentRoutes.js  — /appointments/*
+#   orderRoutes.js        — /orders/*
+#   chatRoutes.js         — /chat/*
+#   publicRoutes.js       — /public/*  (unauthenticated)
+#
+# Rule: Route files must contain ONLY routing declarations:
+#   router.post("/book", protect, appointmentController.book);
+#
+# No business logic. No DB queries. No response formatting.
+# Populated in: Milestone 8 (Routes)

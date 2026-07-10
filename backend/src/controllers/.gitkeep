@@ -1,0 +1,18 @@
+# Controllers Layer
+#
+# Contains request/response handler functions, one file per domain:
+#   authController.js         — register, login, requestOtp, verifyOtp
+#   adminController.js        — getStats, getAllDoctors, approveDoctor, ...
+#   doctorController.js       — getDoctorById, updateSlots, updateClinic, ...
+#   vendorController.js       — getVendorById, updateInventory
+#   appointmentController.js  — book, approve, cancel, processPayment, prescribe
+#   orderController.js        — create, dispatch, receive
+#   chatController.js         — send, getPartners, getConversation
+#
+# Rule: Controllers must contain ONLY:
+#   1. Extract params/body from req
+#   2. Call the corresponding service method
+#   3. Return a standardized ApiResponse
+#
+# No DB queries. No business logic decisions. No direct sqlite3 calls.
+# Populated in: Milestone 7 (Controllers)

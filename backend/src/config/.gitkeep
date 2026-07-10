@@ -1,0 +1,8 @@
+# Config Layer
+#
+# Contains:
+#   database.js  — SQLite connection singleton and schema initialization
+#   env.js       — Environment variable validation and typed exports
+#
+# Rule: No business logic. Only app-level configuration.
+# Populated in: Milestone 2 (Config Layer) and Milestone 3 (.env)

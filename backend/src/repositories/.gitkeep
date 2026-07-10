@@ -1,0 +1,19 @@
+# Repositories Layer (Data Access Layer)
+#
+# Contains all SQLite database query functions, one file per entity:
+#   userRepository.js         — CRUD for the users table
+#   doctorRepository.js       — CRUD for the doctors table
+#   vendorRepository.js       — CRUD for the vendors table
+#   appointmentRepository.js  — CRUD for the appointments table
+#   orderRepository.js        — CRUD for the orders table
+#   chatRepository.js         — CRUD for the messages table
+#
+# Rule: Repositories must:
+#   - Be the ONLY layer that calls db.run, db.get, db.all
+#   - Return raw DB row objects or arrays
+#   - Throw errors on DB failures
+#   - Contain zero business logic
+#
+# This layer is the "M" in MVC (Model / Data Access).
+# Replacing SQLite with PostgreSQL in future only requires changes here.
+# Populated in: Milestone 5 (Repository Layer)
