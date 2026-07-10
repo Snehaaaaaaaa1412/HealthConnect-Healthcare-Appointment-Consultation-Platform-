@@ -1,0 +1,24 @@
+# ─── Dependencies ────────────────────────────────────────────
+node_modules/
+
+# ─── Environment Variables ───────────────────────────────────
+# NEVER commit .env — it contains secrets
+.env
+
+# ─── Database ────────────────────────────────────────────────
+# SQLite database file — contains real user data
+*.db
+*.sqlite
+*.sqlite3
+
+# ─── Uploaded Files ──────────────────────────────────────────
+# User-uploaded medical reports — not committed to source control
+uploads/medical_reports/
+
+# ─── Logs ────────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── OS Files ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
