@@ -2,6 +2,7 @@
 
 const doctorService = require("../services/doctorService");
 const asyncHandler = require("../utils/asyncHandler");
+const ApiResponse = require("../utils/ApiResponse");
 
 const doctorController = {
   /**
@@ -10,7 +11,7 @@ const doctorController = {
   updateClinicDetails: asyncHandler(async (req, res) => {
     const { id, clinicTiming, clinicAddress, consultationAvailability } = req.body;
     const result = await doctorService.updateClinicDetails(id, { clinicTiming, clinicAddress, consultationAvailability });
-    return res.json(result);
+    return res.json(ApiResponse.success(null, result.message || "Clinic details updated successfully"));
   }),
 
   /**
@@ -19,7 +20,7 @@ const doctorController = {
   updateSlots: asyncHandler(async (req, res) => {
     const { id, slots } = req.body;
     const result = await doctorService.updateSlots(id, slots);
-    return res.json(result);
+    return res.json(ApiResponse.success(null, result.message || "Slots updated successfully"));
   }),
 
   /**
@@ -28,7 +29,7 @@ const doctorController = {
   getDoctorById: asyncHandler(async (req, res) => {
     const doctor = await doctorService.getDoctorById(req.params.id);
     if (!doctor) return res.json({ error: "Doctor not found" });
-    return res.json(doctor);
+    return res.json(ApiResponse.success(doctor));
   }),
 
   /**
@@ -37,7 +38,7 @@ const doctorController = {
   updateSpecialization: asyncHandler(async (req, res) => {
     const { id, specialization } = req.body;
     const result = await doctorService.updateSpecialization(id, specialization);
-    return res.json(result);
+    return res.json(ApiResponse.success(null, result.message || "Specialization updated successfully"));
   }),
 
   /**
@@ -45,7 +46,7 @@ const doctorController = {
    */
   getApprovedDoctors: asyncHandler(async (req, res) => {
     const rows = await doctorService.getApprovedDoctors();
-    return res.json(rows);
+    return res.json(ApiResponse.success(rows));
   })
 };
 

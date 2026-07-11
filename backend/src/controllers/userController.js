@@ -2,6 +2,7 @@
 
 const userService = require("../services/userService");
 const asyncHandler = require("../utils/asyncHandler");
+const ApiResponse = require("../utils/ApiResponse");
 
 const userController = {
   /**
@@ -10,7 +11,7 @@ const userController = {
   getUserProfile: asyncHandler(async (req, res) => {
     const profile = await userService.getUserByUsername(req.params.username);
     if (!profile) return res.json({ error: "User not found" });
-    return res.json(profile);
+    return res.json(ApiResponse.success(profile));
   })
 };
 

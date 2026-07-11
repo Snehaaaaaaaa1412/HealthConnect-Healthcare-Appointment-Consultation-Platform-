@@ -9,6 +9,7 @@ const vendorService = require("../services/vendorService");
 const otpService = require("../services/otpService");
 const emailService = require("../services/emailService");
 const asyncHandler = require("../utils/asyncHandler");
+const ApiResponse = require("../utils/ApiResponse");
 
 // Helper to sign JWTs
 const generateToken = (payload) => {
@@ -25,7 +26,7 @@ const authController = {
     if (role === "user") {
       try {
         const result = await userService.registerUser({ fullName, username, password, mobile, email, gender, age });
-        return res.json(result);
+        return res.json(ApiResponse.success(null, result.message || "User registered successfully"));
       } catch (err) {
         if (err.isUniqueViolation) return res.json({ error: "Username is already taken" });
         throw err;
@@ -35,7 +36,7 @@ const authController = {
     if (role === "doctor") {
       try {
         const result = await doctorService.registerDoctor({ fullName, username, password, mobile, email, specialization });
-        return res.json(result);
+        return res.json(ApiResponse.success(null, result.message || "Doctor registered successfully"));
       } catch (err) {
         if (err.isUniqueViolation) return res.json({ error: "Username is already taken" });
         throw err;
@@ -45,7 +46,7 @@ const authController = {
     if (role === "vendor") {
       try {
         const result = await vendorService.registerVendor({ fullName, username, password, mobile, email, storeName });
-        return res.json(result);
+        return res.json(ApiResponse.success(null, result.message || "Vendor registered successfully"));
       } catch (err) {
         if (err.isUniqueViolation) return res.json({ error: "Username is already taken" });
         throw err;
@@ -64,11 +65,10 @@ const authController = {
     if (role === "admin") {
       if (username === "admin" && password === "admin") {
         const token = generateToken({ id: 0, username: "admin", role: "admin" });
-        return res.json({
-          message: "Login successful",
+        return res.json(ApiResponse.success({
           token,
           user: { id: 0, fullName: "System Administrator", username: "admin" }
-        });
+        }, "Login successful"));
       }
       return res.json({ message: "Invalid credentials" });
     }
@@ -83,21 +83,21 @@ const authController = {
       otpService.storeOtp(otpToken, cleanUser, otp);
       emailService.sendOtpEmail(cleanUser.email, cleanUser.fullName, otp);
 
-      return res.json({ requiresOTP: true, otpToken, email: cleanUser.email });
+      return res.json(ApiResponse.success({ requiresOTP: true, otpToken, email: cleanUser.email }));
     }
 
     if (role === "vendor") {
       const cleanVendor = await vendorService.loginVendor(username, password);
       if (!cleanVendor) return res.json({ message: "Invalid credentials" });
       const token = generateToken({ id: cleanVendor.id, username: cleanVendor.username, role: "vendor" });
-      return res.json({ message: "Login successful", token, user: cleanVendor });
+      return res.json(ApiResponse.success({ token, user: cleanVendor }, "Login successful"));
     }
 
     if (role === "doctor") {
       const cleanDoctor = await doctorService.loginDoctor(username, password);
       if (!cleanDoctor) return res.json({ message: "Invalid credentials" });
       const token = generateToken({ id: cleanDoctor.id, username: cleanDoctor.username, role: "doctor" });
-      return res.json({ message: "Login successful", token, user: cleanDoctor });
+      return res.json(ApiResponse.success({ token, user: cleanDoctor }, "Login successful"));
     }
 
     return res.json({ message: "Invalid role specified" });
@@ -115,7 +115,7 @@ const authController = {
     }
 
     const token = generateToken({ id: verifiedUser.id, username: verifiedUser.username, role: "user" });
-    return res.json({ message: "Login successful", token, user: verifiedUser });
+    return res.json(ApiResponse.success({ token, user: verifiedUser }, "Login successful"));
   }),
 
   /**
@@ -133,7 +133,7 @@ const authController = {
     otpService.updateOtp(otpToken, newOtp);
     emailService.sendOtpEmail(stored.user.email, stored.user.fullName, newOtp);
 
-    return res.json({ message: "OTP resent successfully" });
+    return res.json(ApiResponse.success(null, "OTP resent successfully"));
   })
 };
 

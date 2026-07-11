@@ -2,6 +2,7 @@
 
 const appointmentService = require("../services/appointmentService");
 const asyncHandler = require("../utils/asyncHandler");
+const ApiResponse = require("../utils/ApiResponse");
 
 const appointmentController = {
   /**
@@ -31,7 +32,7 @@ const appointmentController = {
       medicalReportPath: req.file ? `/uploads/medical_reports/${req.file.filename}` : ""
     });
 
-    res.json(result);
+    res.json(ApiResponse.success(null, result.message || "Appointment booked successfully"));
   }),
 
   /**
@@ -40,7 +41,8 @@ const appointmentController = {
   approveAppointment: asyncHandler(async (req, res) => {
     const { appointmentId } = req.body;
     const result = await appointmentService.approveAppointment(appointmentId);
-    res.json(result);
+    // Return custom success envelope containing the metadata fields directly
+    res.json(ApiResponse.success(result));
   }),
 
   /**
@@ -49,7 +51,7 @@ const appointmentController = {
   cancelAppointment: asyncHandler(async (req, res) => {
     const { appointmentId } = req.body;
     const result = await appointmentService.cancelAppointment(appointmentId);
-    res.json(result);
+    res.json(ApiResponse.success(null, result.message || "Appointment cancelled successfully"));
   }),
 
   /**
@@ -58,7 +60,7 @@ const appointmentController = {
   payAppointment: asyncHandler(async (req, res) => {
     const { appointmentId } = req.body;
     const result = await appointmentService.payAppointment(appointmentId);
-    res.json(result);
+    res.json(ApiResponse.success(null, result.message || "Payment processed successfully"));
   }),
 
   /**
@@ -66,7 +68,7 @@ const appointmentController = {
    */
   getPatientAppointments: asyncHandler(async (req, res) => {
     const appointments = await appointmentService.getPatientAppointments(req.params.username);
-    res.json(appointments);
+    res.json(ApiResponse.success(appointments));
   }),
 
   /**
@@ -74,7 +76,7 @@ const appointmentController = {
    */
   getDoctorAppointments: asyncHandler(async (req, res) => {
     const appointments = await appointmentService.getDoctorAppointments(req.params.username);
-    res.json(appointments);
+    res.json(ApiResponse.success(appointments));
   }),
 
   /**
@@ -88,7 +90,7 @@ const appointmentController = {
       dosage,
       times
     });
-    res.json(result);
+    res.json(ApiResponse.success(result));
   })
 };
 

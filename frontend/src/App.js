@@ -17,6 +17,23 @@ if (savedToken) {
   axios.defaults.headers.common["Authorization"] = `Bearer ${savedToken}`;
 }
 
+// Global Axios response interceptor to unpack standard backend ApiResponse success envelopes
+axios.interceptors.response.use(
+  (response) => {
+    // If the response body matches the ApiResponse structure
+    if (response.data && response.data.success === true) {
+      // If it contains a 'data' payload, return it directly on the response object
+      if (response.data.hasOwnProperty("data")) {
+        return { ...response, data: response.data.data };
+      }
+    }
+    return response;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 function App() {
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("healthconnect_user");

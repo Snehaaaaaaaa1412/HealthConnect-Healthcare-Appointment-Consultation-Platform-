@@ -2,6 +2,7 @@
 
 const vendorService = require("../services/vendorService");
 const asyncHandler = require("../utils/asyncHandler");
+const ApiResponse = require("../utils/ApiResponse");
 
 const vendorController = {
   /**
@@ -10,7 +11,7 @@ const vendorController = {
   getVendorById: asyncHandler(async (req, res) => {
     const vendor = await vendorService.getVendorById(req.params.id);
     if (!vendor) return res.json({ error: "Vendor not found" });
-    return res.json(vendor);
+    return res.json(ApiResponse.success(vendor));
   }),
 
   /**
@@ -19,7 +20,7 @@ const vendorController = {
   updateInventory: asyncHandler(async (req, res) => {
     const { id, inventory } = req.body;
     const result = await vendorService.updateInventory(id, inventory);
-    return res.json(result);
+    return res.json(ApiResponse.success(null, result.message || "Inventory updated successfully"));
   }),
 
   /**
@@ -27,7 +28,7 @@ const vendorController = {
    */
   getApprovedVendors: asyncHandler(async (req, res) => {
     const rows = await vendorService.getApprovedVendors();
-    return res.json(rows);
+    return res.json(ApiResponse.success(rows));
   })
 };
 

@@ -2,6 +2,7 @@
 
 const chatService = require("../services/chatService");
 const asyncHandler = require("../utils/asyncHandler");
+const ApiResponse = require("../utils/ApiResponse");
 
 const chatController = {
   /**
@@ -16,7 +17,7 @@ const chatController = {
       senderUsername,
       message
     });
-    res.json({ message: "Message sent", id: result.lastID });
+    res.json(ApiResponse.success({ id: result.lastID }, "Message sent"));
   }),
 
   /**
@@ -24,7 +25,7 @@ const chatController = {
    */
   getDoctorPartners: asyncHandler(async (req, res) => {
     const partners = await chatService.getDoctorPartners(req.params.doctorUsername);
-    res.json(partners);
+    res.json(ApiResponse.success(partners));
   }),
 
   /**
@@ -32,7 +33,7 @@ const chatController = {
    */
   getPatientPartners: asyncHandler(async (req, res) => {
     const partners = await chatService.getPatientPartners(req.params.patientUsername);
-    res.json(partners);
+    res.json(ApiResponse.success(partners));
   }),
 
   /**
@@ -40,7 +41,7 @@ const chatController = {
    */
   getChatContext: asyncHandler(async (req, res) => {
     const context = await chatService.getChatContext(req.params.doctorUsername, req.params.patientUsername);
-    res.json(context);
+    res.json(ApiResponse.success(context));
   }),
 
   /**
@@ -48,7 +49,7 @@ const chatController = {
    */
   getConversation: asyncHandler(async (req, res) => {
     const conversation = await chatService.getConversation(req.params.doctorUsername, req.params.patientUsername);
-    res.json(conversation);
+    res.json(ApiResponse.success(conversation));
   })
 };
 
