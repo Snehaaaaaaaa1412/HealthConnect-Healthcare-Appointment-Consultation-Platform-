@@ -245,6 +245,50 @@ const appointmentService = {
       await dbRun("ROLLBACK");
       throw error;
     }
+  },
+
+  /**
+   * Scan and cancel all unpaid appointment lease-locks older than 10 minutes,
+   * restoring the slot back to the doctor's available availability.
+   *
+   * @returns {Promise<void>}
+   */
+  releaseExpiredLocks: async () => {
+    const expiredAppointments = await appointmentRepository.findExpiredLocks();
+    if (expiredAppointments && expiredAppointments.length > 0) {
+      for (const appt of expiredAppointments) {
+        await dbRun("BEGIN IMMEDIATE TRANSACTION");
+        try {
+          const doctor = await doctorRepository.findByUsername(appt.doctorUsername);
+          if (!doctor) {
+            throw new Error("Doctor not found for expired lock");
+          }
+
+          let slotsArr = [];
+          try {
+            slotsArr = JSON.parse(doctor.slots || "[]");
+          } catch (e) {
+            slotsArr = [];
+          }
+
+          const restoredSlot = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            datetime: appt.slot,
+            fee: appt.fee || 0.0
+          };
+          slotsArr.push(restoredSlot);
+
+          await doctorRepository.updateSlots(doctor.id, JSON.stringify(slotsArr));
+          await appointmentRepository.updateStatus(appt.id, "cancelled");
+
+          await dbRun("COMMIT");
+          console.log(`[Escrow Lease Lock] Released expired slot lock for appointment ID ${appt.id}`);
+        } catch (err) {
+          await dbRun("ROLLBACK");
+          console.error(`[Escrow Lease Lock] Failed to release slot lock for appointment ID ${appt.id}:`, err.message);
+        }
+      }
+    }
   }
 };
 
