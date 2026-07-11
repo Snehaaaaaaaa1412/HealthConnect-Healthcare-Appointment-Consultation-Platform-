@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import emailjs from "@emailjs/browser";
 import { UserIcon, BackIcon } from "../Icons";
 import "./Login.css";
 
@@ -15,7 +14,7 @@ function UserLogin({ onLogin }) {
   // OTP Verification states
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [tempUser, setTempUser] = useState(null);
-  const [generatedOtp, setGeneratedOtp] = useState("");
+  const [generatedOtp, setGeneratedOtp] = useState(""); // will store the backend otpToken
   const [inputOtp, setInputOtp] = useState("");
   const [otpError, setOtpError] = useState("");
   const [isOtpSending, setIsOtpSending] = useState(false);
@@ -29,98 +28,6 @@ function UserLogin({ onLogin }) {
     }
   }, [resendCountdown]);
 
-  const sendOtpEmail = async (userData, otpCode) => {
-    setIsOtpSending(true);
-    setOtpError("");
-    try {
-      const expiryTime = new Date(Date.now() + 15 * 60 * 1000).toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
-
-      const templateParams = {
-        // Receiver details
-        to_name: userData.fullName || userData.username,
-        to_email: userData.email,
-        email: userData.email,
-        user_email: userData.email,
-
-        // OTP PIN variations
-        otp: otpCode,
-        OTP: otpCode,
-        otp_code: otpCode,
-        otpCode: otpCode,
-        code: otpCode,
-        CODE: otpCode,
-        pin: otpCode,
-        PIN: otpCode,
-        passcode: otpCode,
-        one_time_password: otpCode,
-        oneTimePassword: otpCode,
-        verification_code: otpCode,
-        verificationCode: otpCode,
-        security_code: otpCode,
-        securityCode: otpCode,
-        user_otp: otpCode,
-        userOtp: otpCode,
-        otp_pin: otpCode,
-        otpPin: otpCode,
-
-        // Company Name variations (using "HealthConnect" per request)
-        "Company Name": "HealthConnect",
-        "Company name": "HealthConnect",
-        "company name": "HealthConnect",
-        company_name: "HealthConnect",
-        companyName: "HealthConnect",
-        Company_Name: "HealthConnect",
-        company: "HealthConnect",
-        Company: "HealthConnect",
-        company_Name: "HealthConnect",
-        Companyname: "HealthConnect",
-        companyname: "HealthConnect",
-        app_name: "HealthConnect",
-        appName: "HealthConnect",
-        App_Name: "HealthConnect",
-        AppName: "HealthConnect",
-
-        // Expiry/Time variations
-        till: expiryTime,
-        till_time: expiryTime,
-        expiry: expiryTime,
-        expiry_time: expiryTime,
-        expiryTime: expiryTime,
-        expires: expiryTime,
-        expire: expiryTime,
-        valid_till: expiryTime,
-        valid_until: expiryTime,
-        validTill: expiryTime,
-        validUntil: expiryTime,
-        time: expiryTime,
-        expiration: expiryTime,
-        expiration_time: expiryTime,
-        expirationTime: expiryTime,
-        date: expiryTime,
-        datetime: expiryTime,
-
-        // Standard message fallback
-        message: `Your secure digital health network OTP pin is ${otpCode}. It is valid for 15 minutes till ${expiryTime}.`
-      };
-
-      await emailjs.send(
-        "service_xdapgci",
-        "template_5qx6teb",
-        templateParams,
-        "MX9Rn6mXrSovSzzJG"
-      );
-      setIsOtpSending(false);
-    } catch (err) {
-      console.error("EmailJS sending failed:", err);
-      setOtpError("Failed to deliver OTP. Please verify your connection or try again.");
-      setIsOtpSending(false);
-    }
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -133,20 +40,15 @@ function UserLogin({ onLogin }) {
         role: "user",
       });
 
-      if (res.data.message === "Login successful") {
-        // Valid credentials -> Generate random 6-digit OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        setGeneratedOtp(otp);
-        setTempUser(res.data.user);
+      if (res.data.requiresOTP) {
+        setGeneratedOtp(res.data.otpToken); // store otpToken here
+        setTempUser({ email: res.data.email });
         setShowOtpModal(true);
         setResendCountdown(30);
         setInputOtp("");
         setOtpError("");
-
-        // Trigger Email delivery
-        sendOtpEmail(res.data.user, otp);
       } else {
-        setMessage(res.data.message || "Invalid credentials");
+        setMessage(res.data.message || res.data.error || "Invalid credentials");
       }
     } catch (error) {
       setMessage("Login failed. Please check your credentials.");
@@ -155,24 +57,49 @@ function UserLogin({ onLogin }) {
     }
   };
 
-  const handleVerifyOtp = (e) => {
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    if (inputOtp === generatedOtp) {
-      // OTP matched -> log in successfully
-      onLogin(tempUser, "user");
-    } else {
-      setOtpError("Incorrect 6-digit OTP. Please check your email and try again.");
+    setIsOtpSending(true);
+    setOtpError("");
+    try {
+      const res = await axios.post("http://localhost:5000/auth/verify-otp", {
+        otpToken: generatedOtp,
+        otp: inputOtp,
+      });
+
+      if (res.data.message === "Login successful") {
+        onLogin(res.data.user, "user");
+      } else {
+        setOtpError(res.data.error || "Incorrect 6-digit OTP. Please check your email and try again.");
+      }
+    } catch (err) {
+      setOtpError("Verification failed. Please check your code and try again.");
+    } finally {
+      setIsOtpSending(false);
     }
   };
 
-  const handleResendOtp = () => {
+  const handleResendOtp = async () => {
     if (resendCountdown > 0) return;
-    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(newOtp);
-    setResendCountdown(30);
-    setInputOtp("");
+    setIsOtpSending(true);
     setOtpError("");
-    sendOtpEmail(tempUser, newOtp);
+    try {
+      const res = await axios.post("http://localhost:5000/auth/resend-otp", {
+        otpToken: generatedOtp,
+      });
+
+      if (res.data.message === "OTP resent successfully") {
+        setResendCountdown(30);
+        setInputOtp("");
+        setOtpError("");
+      } else {
+        setOtpError(res.data.error || "Failed to resend OTP.");
+      }
+    } catch (err) {
+      setOtpError("Resend failed. Please try again.");
+    } finally {
+      setIsOtpSending(false);
+    }
   };
 
   return (

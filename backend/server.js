@@ -23,6 +23,9 @@ const asyncHandler = require("./src/utils/asyncHandler");
 const ApiResponse = require("./src/utils/ApiResponse");
 const { ValidationError } = require("./src/utils/ApiError");
 const errorMiddleware = require("./src/middleware/errorMiddleware");
+const crypto = require("crypto");
+const otpService = require("./src/services/otpService");
+const emailService = require("./src/services/emailService");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -112,12 +115,19 @@ app.post("/login", async (req, res) => {
     return res.json({ message: "Invalid credentials" });
   }
 
-  // ── User (Patient) login → userService → userRepository
+  // ── User (Patient) login → userService → userRepository + otpService + emailService
   if (role === "user") {
     try {
       const cleanUser = await userService.loginUser(username, password);
       if (!cleanUser) return res.json({ message: "Invalid credentials" });
-      return res.json({ message: "Login successful", user: cleanUser });
+
+      const otpToken = crypto.randomUUID();
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+      otpService.storeOtp(otpToken, cleanUser, otp);
+      emailService.sendOtpEmail(cleanUser.email, cleanUser.fullName, otp);
+
+      return res.json({ requiresOTP: true, otpToken, email: cleanUser.email });
     } catch (err) {
       return res.json({ message: "Database error: " + err.message });
     }
@@ -900,6 +910,34 @@ app.get("/health", asyncHandler(async (req, res) => {
     throw new ValidationError("Intentional validation error for testing M1.2");
   }
   res.json(ApiResponse.success({ status: "UP", database: "connected" }));
+}));
+
+// OTP Verification API → verify OTP and log user in
+app.post("/auth/verify-otp", asyncHandler(async (req, res) => {
+  const { otpToken, otp } = req.body;
+  const verifiedUser = otpService.verifyOtp(otpToken, otp);
+
+  if (!verifiedUser) {
+    return res.json({ error: "Incorrect 6-digit OTP. Please check your email and try again." });
+  }
+
+  return res.json({ message: "Login successful", user: verifiedUser });
+}));
+
+// OTP Resend API → generate new OTP and email it
+app.post("/auth/resend-otp", asyncHandler(async (req, res) => {
+  const { otpToken } = req.body;
+  const stored = otpService.getStored(otpToken);
+
+  if (!stored) {
+    return res.json({ error: "OTP request session expired. Please log in again." });
+  }
+
+  const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+  otpService.updateOtp(otpToken, newOtp);
+  emailService.sendOtpEmail(stored.user.email, stored.user.fullName, newOtp);
+
+  return res.json({ message: "OTP resent successfully" });
 }));
 
 // Global error handling middleware
