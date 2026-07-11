@@ -18,6 +18,7 @@ const app = require("./app");
 const db = require("./src/config/database");
 const userService  = require("./src/services/userService");
 const vendorService = require("./src/services/vendorService");
+const doctorService = require("./src/services/doctorService");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -67,23 +68,15 @@ app.post("/register", async (req, res) => {
     }
   }
 
-  // ── Doctor registration (raw SQL — migrated in a future milestone)
+  // ── Doctor registration → doctorService → doctorRepository
   if (role === "doctor") {
-    const specValue = specialization || "General Practitioner";
-    db.run(
-      `INSERT INTO doctors (fullName, username, password, mobile, email, specialization) VALUES (?, ?, ?, ?, ?, ?)`,
-      [fullName, username, password, mobile, email, specValue],
-      function (err) {
-        if (err) {
-          if (err.message.includes("UNIQUE")) {
-            return res.json({ error: "Username is already taken" });
-          }
-          return res.json({ error: err.message });
-        }
-        res.json({ message: "User registered successfully" });
-      }
-    );
-    return;
+    try {
+      const result = await doctorService.registerDoctor({ fullName, username, password, mobile, email, specialization });
+      return res.json(result);
+    } catch (err) {
+      if (err.isUniqueViolation) return res.json({ error: "Username is already taken" });
+      return res.json({ error: err.message });
+    }
   }
 
   // ── Vendor registration → vendorService → vendorRepository
@@ -137,22 +130,15 @@ app.post("/login", async (req, res) => {
     }
   }
 
-  // ── Doctor login (raw SQL — migrated in a future milestone)
+  // ── Doctor login → doctorService → doctorRepository
   if (role === "doctor") {
-    db.get(
-      `SELECT * FROM doctors WHERE username = ? AND password = ?`,
-      [username, password],
-      (err, row) => {
-        if (err) return res.json({ message: "Database error: " + err.message });
-        if (row) {
-          const { password: _, ...cleanDoctor } = row;
-          res.json({ message: "Login successful", user: cleanDoctor });
-        } else {
-          res.json({ message: "Invalid credentials" });
-        }
-      }
-    );
-    return;
+    try {
+      const cleanDoctor = await doctorService.loginDoctor(username, password);
+      if (!cleanDoctor) return res.json({ message: "Invalid credentials" });
+      return res.json({ message: "Login successful", user: cleanDoctor });
+    } catch (err) {
+      return res.json({ message: "Database error: " + err.message });
+    }
   }
 
   return res.json({ message: "Invalid role specified" });
@@ -176,12 +162,14 @@ app.get("/admin/stats", (req, res) => {
   });
 });
 
-// Admin API: Get all doctors
-app.get("/admin/doctors", (req, res) => {
-  db.all("SELECT id, fullName, username, mobile, email, specialization, status, balance FROM doctors", [], (err, rows) => {
-    if (err) return res.json({ error: err.message });
-    res.json(rows);
-  });
+// Admin API: Get all doctors → doctorService → doctorRepository
+app.get("/admin/doctors", async (req, res) => {
+  try {
+    const rows = await doctorService.getAllForAdmin();
+    return res.json(rows);
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
 // Admin API: Get all vendors → vendorService → vendorRepository
@@ -194,13 +182,14 @@ app.get("/admin/vendors", async (req, res) => {
   }
 });
 
-// Admin API: Approve Doctor
-app.post("/admin/approve-doctor", (req, res) => {
-  const { id } = req.body;
-  db.run("UPDATE doctors SET status = 'approved' WHERE id = ?", [id], function (err) {
-    if (err) return res.json({ error: err.message });
-    res.json({ message: "Doctor approved successfully" });
-  });
+// Admin API: Approve Doctor → doctorService → doctorRepository
+app.post("/admin/approve-doctor", async (req, res) => {
+  try {
+    const result = await doctorService.approveDoctor(req.body.id);
+    return res.json(result);
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
 // Admin API: Approve Vendor → vendorService → vendorRepository
@@ -213,13 +202,14 @@ app.post("/admin/approve-vendor", async (req, res) => {
   }
 });
 
-// Admin API: Delete Practitioner
-app.post("/admin/delete-doctor", (req, res) => {
-  const { id } = req.body;
-  db.run("DELETE FROM doctors WHERE id = ?", [id], function (err) {
-    if (err) return res.json({ error: err.message });
-    res.json({ message: "Doctor removed successfully" });
-  });
+// Admin API: Delete Practitioner → doctorService → doctorRepository
+app.post("/admin/delete-doctor", async (req, res) => {
+  try {
+    const result = await doctorService.deleteDoctor(req.body.id);
+    return res.json(result);
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
 // Admin API: Delete Store → vendorService → vendorRepository
@@ -232,48 +222,48 @@ app.post("/admin/delete-vendor", async (req, res) => {
   }
 });
 
-// Doctor API: Update Clinic Details
-app.post("/doctors/clinic-details", (req, res) => {
-  const { id, clinicTiming, clinicAddress, consultationAvailability } = req.body;
-  db.run(
-    "UPDATE doctors SET clinicTiming = ?, clinicAddress = ?, consultationAvailability = ? WHERE id = ?",
-    [clinicTiming || "", clinicAddress || "", consultationAvailability || "", id],
-    function (err) {
-      if (err) return res.json({ error: err.message });
-      res.json({ message: "Clinic details updated successfully" });
-    }
-  );
+// Doctor API: Update Clinic Details → doctorService → doctorRepository
+app.post("/doctors/clinic-details", async (req, res) => {
+  try {
+    const { id, clinicTiming, clinicAddress, consultationAvailability } = req.body;
+    const result = await doctorService.updateClinicDetails(id, { clinicTiming, clinicAddress, consultationAvailability });
+    return res.json(result);
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
-// Doctor API: Update Availability Slots
-app.post("/doctors/slots", (req, res) => {
-  const { id, slots } = req.body;
-  db.run("UPDATE doctors SET slots = ? WHERE id = ?", [JSON.stringify(slots), id], function (err) {
-    if (err) return res.json({ error: err.message });
-    res.json({ message: "Slots updated successfully" });
-  });
+// Doctor API: Update Availability Slots → doctorService → doctorRepository
+app.post("/doctors/slots", async (req, res) => {
+  try {
+    const { id, slots } = req.body;
+    const result = await doctorService.updateSlots(id, slots);
+    return res.json(result);
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
-// Doctor API: Get Details (with slots)
-app.get("/doctors/:id", (req, res) => {
-  db.get("SELECT * FROM doctors WHERE id = ?", [req.params.id], (err, row) => {
-    if (err) return res.json({ error: err.message });
-    if (row) {
-      const { password, ...cleanDoctor } = row;
-      res.json(cleanDoctor);
-    } else {
-      res.json({ error: "Doctor not found" });
-    }
-  });
+// Doctor API: Get Details → doctorService → doctorRepository
+app.get("/doctors/:id", async (req, res) => {
+  try {
+    const doctor = await doctorService.getDoctorById(req.params.id);
+    if (doctor) return res.json(doctor);
+    return res.json({ error: "Doctor not found" });
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
-// Doctor API: Update Specialization
-app.post("/doctors/update-specialization", (req, res) => {
-  const { id, specialization } = req.body;
-  db.run("UPDATE doctors SET specialization = ? WHERE id = ?", [specialization, id], function (err) {
-    if (err) return res.json({ error: err.message });
-    res.json({ message: "Specialization updated successfully" });
-  });
+// Doctor API: Update Specialization → doctorService → doctorRepository
+app.post("/doctors/update-specialization", async (req, res) => {
+  try {
+    const { id, specialization } = req.body;
+    const result = await doctorService.updateSpecialization(id, specialization);
+    return res.json(result);
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
 // Vendor API: Get Details → vendorService → vendorRepository
@@ -297,16 +287,14 @@ app.post("/vendors/inventory", async (req, res) => {
   }
 });
 
-// Public / User Directory APIs: Get All Approved Doctors
-app.get("/public/doctors", (req, res) => {
-  db.all(
-    "SELECT id, fullName, username, specialization, email, mobile, slots, clinicTiming, clinicAddress, consultationAvailability FROM doctors WHERE status = 'approved'",
-    [],
-    (err, rows) => {
-      if (err) return res.json({ error: err.message });
-      res.json(rows);
-    }
-  );
+// Public / User Directory APIs: Get All Approved Doctors → doctorService → doctorRepository
+app.get("/public/doctors", async (req, res) => {
+  try {
+    const rows = await doctorService.getApprovedDoctors();
+    return res.json(rows);
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
 // Public / User Directory APIs: Get All Approved Vendors → vendorService → vendorRepository
