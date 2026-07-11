@@ -16,7 +16,8 @@ require("dotenv").config(); // Must be called before any other require reads pro
 const env = require("./src/config/env");
 const app = require("./app");
 const db = require("./src/config/database");
-const userService = require("./src/services/userService");
+const userService  = require("./src/services/userService");
+const vendorService = require("./src/services/vendorService");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -85,22 +86,15 @@ app.post("/register", async (req, res) => {
     return;
   }
 
-  // ── Vendor registration (raw SQL — migrated in a future milestone)
+  // ── Vendor registration → vendorService → vendorRepository
   if (role === "vendor") {
-    db.run(
-      `INSERT INTO vendors (fullName, username, password, mobile, email, storeName) VALUES (?, ?, ?, ?, ?, ?)`,
-      [fullName, username, password, mobile, email, storeName || "Health Pharmacy"],
-      function (err) {
-        if (err) {
-          if (err.message.includes("UNIQUE")) {
-            return res.json({ error: "Username is already taken" });
-          }
-          return res.json({ error: err.message });
-        }
-        res.json({ message: "User registered successfully" });
-      }
-    );
-    return;
+    try {
+      const result = await vendorService.registerVendor({ fullName, username, password, mobile, email, storeName });
+      return res.json(result);
+    } catch (err) {
+      if (err.isUniqueViolation) return res.json({ error: "Username is already taken" });
+      return res.json({ error: err.message });
+    }
   }
 
   return res.json({ error: "Invalid role specified" });
@@ -132,26 +126,36 @@ app.post("/login", async (req, res) => {
     }
   }
 
-  // ── Doctor / Vendor login (raw SQL — migrated in a future milestone)
-  let tableName = "";
-  if (role === "doctor") tableName = "doctors";
-  else if (role === "vendor") tableName = "vendors";
-  else return res.json({ message: "Invalid role specified" });
-
-  db.get(
-    `SELECT * FROM ${tableName} WHERE username = ? AND password = ?`,
-    [username, password],
-    (err, row) => {
-      if (err) return res.json({ message: "Database error: " + err.message });
-      if (row) {
-        // Return details, strip password out
-        const { password: _, ...cleanUser } = row;
-        res.json({ message: "Login successful", user: cleanUser });
-      } else {
-        res.json({ message: "Invalid credentials" });
-      }
+  // ── Vendor login → vendorService → vendorRepository
+  if (role === "vendor") {
+    try {
+      const cleanVendor = await vendorService.loginVendor(username, password);
+      if (!cleanVendor) return res.json({ message: "Invalid credentials" });
+      return res.json({ message: "Login successful", user: cleanVendor });
+    } catch (err) {
+      return res.json({ message: "Database error: " + err.message });
     }
-  );
+  }
+
+  // ── Doctor login (raw SQL — migrated in a future milestone)
+  if (role === "doctor") {
+    db.get(
+      `SELECT * FROM doctors WHERE username = ? AND password = ?`,
+      [username, password],
+      (err, row) => {
+        if (err) return res.json({ message: "Database error: " + err.message });
+        if (row) {
+          const { password: _, ...cleanDoctor } = row;
+          res.json({ message: "Login successful", user: cleanDoctor });
+        } else {
+          res.json({ message: "Invalid credentials" });
+        }
+      }
+    );
+    return;
+  }
+
+  return res.json({ message: "Invalid role specified" });
 });
 
 // Admin API: Statistics Dashboard
@@ -180,12 +184,14 @@ app.get("/admin/doctors", (req, res) => {
   });
 });
 
-// Admin API: Get all vendors
-app.get("/admin/vendors", (req, res) => {
-  db.all("SELECT id, fullName, username, mobile, email, storeName, status, balance FROM vendors", [], (err, rows) => {
-    if (err) return res.json({ error: err.message });
-    res.json(rows);
-  });
+// Admin API: Get all vendors → vendorService → vendorRepository
+app.get("/admin/vendors", async (req, res) => {
+  try {
+    const rows = await vendorService.getAllForAdmin();
+    return res.json(rows);
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
 // Admin API: Approve Doctor
@@ -197,13 +203,14 @@ app.post("/admin/approve-doctor", (req, res) => {
   });
 });
 
-// Admin API: Approve Vendor
-app.post("/admin/approve-vendor", (req, res) => {
-  const { id } = req.body;
-  db.run("UPDATE vendors SET status = 'approved' WHERE id = ?", [id], function (err) {
-    if (err) return res.json({ error: err.message });
-    res.json({ message: "Vendor approved successfully" });
-  });
+// Admin API: Approve Vendor → vendorService → vendorRepository
+app.post("/admin/approve-vendor", async (req, res) => {
+  try {
+    const result = await vendorService.approveVendor(req.body.id);
+    return res.json(result);
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
 // Admin API: Delete Practitioner
@@ -215,13 +222,14 @@ app.post("/admin/delete-doctor", (req, res) => {
   });
 });
 
-// Admin API: Delete Store
-app.post("/admin/delete-vendor", (req, res) => {
-  const { id } = req.body;
-  db.run("DELETE FROM vendors WHERE id = ?", [id], function (err) {
-    if (err) return res.json({ error: err.message });
-    res.json({ message: "Vendor removed successfully" });
-  });
+// Admin API: Delete Store → vendorService → vendorRepository
+app.post("/admin/delete-vendor", async (req, res) => {
+  try {
+    const result = await vendorService.deleteVendor(req.body.id);
+    return res.json(result);
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
 // Doctor API: Update Clinic Details
@@ -268,42 +276,25 @@ app.post("/doctors/update-specialization", (req, res) => {
   });
 });
 
-// Vendor API: Get Details (with inventory)
-app.get("/vendors/:id", (req, res) => {
-  db.get("SELECT * FROM vendors WHERE id = ?", [req.params.id], (err, row) => {
-    if (err) return res.json({ error: err.message });
-    if (row) {
-      const { password, ...cleanVendor } = row;
-      res.json(cleanVendor);
-    } else {
-      res.json({ error: "Vendor not found" });
-    }
-  });
+// Vendor API: Get Details → vendorService → vendorRepository
+app.get("/vendors/:id", async (req, res) => {
+  try {
+    const vendor = await vendorService.getVendorById(req.params.id);
+    if (vendor) return res.json(vendor);
+    return res.json({ error: "Vendor not found" });
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
-// Vendor API: Update Inventory Stock
-app.post("/vendors/inventory", (req, res) => {
-  const { id, inventory } = req.body;
-  db.run("UPDATE vendors SET inventory = ? WHERE id = ?", [JSON.stringify(inventory), id], function (err) {
-    if (err) return res.json({ error: err.message });
-
-    try {
-      const items = typeof inventory === "string" ? JSON.parse(inventory) : inventory;
-      if (Array.isArray(items)) {
-        const stmt = db.prepare("INSERT OR IGNORE INTO medicine (name, domain) VALUES (?, ?)");
-        items.forEach(item => {
-          if (item && item.name) {
-            stmt.run(item.name, item.domain || "General Practitioner");
-          }
-        });
-        stmt.finalize();
-      }
-    } catch (e) {
-      console.error("Failed to parse inventory for saving medicines:", e);
-    }
-
-    res.json({ message: "Inventory updated successfully" });
-  });
+// Vendor API: Update Inventory Stock → vendorService → vendorRepository + medicineRepository
+app.post("/vendors/inventory", async (req, res) => {
+  try {
+    const result = await vendorService.updateInventory(req.body.id, req.body.inventory);
+    return res.json(result);
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
 // Public / User Directory APIs: Get All Approved Doctors
@@ -318,12 +309,14 @@ app.get("/public/doctors", (req, res) => {
   );
 });
 
-// Public / User Directory APIs: Get All Approved Vendors
-app.get("/public/vendors", (req, res) => {
-  db.all("SELECT id, fullName, storeName, email, mobile, inventory FROM vendors WHERE status = 'approved'", [], (err, rows) => {
-    if (err) return res.json({ error: err.message });
-    res.json(rows);
-  });
+// Public / User Directory APIs: Get All Approved Vendors → vendorService → vendorRepository
+app.get("/public/vendors", async (req, res) => {
+  try {
+    const rows = await vendorService.getApprovedVendors();
+    return res.json(rows);
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
 // Get patient profile → userService → userRepository
