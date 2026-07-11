@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { apiClient } from "../../config/api";
+import { doctorService } from "../../services/doctorService";
+import { appointmentService } from "../../services/appointmentService";
+import { chatService } from "../../services/chatService";
 import emailjs from "@emailjs/browser";
 import {
   DoctorIcon,
@@ -48,17 +50,17 @@ function DoctorDashboard({ user }) {
 
   const fetchDoctorDetails = async () => {
     try {
-      const res = await apiClient.get(`/doctors/${user.id}`);
-      if (res.data && !res.data.error) {
-        setDoctorInfo(res.data);
+      const res = await doctorService.getDoctorById(user.id);
+      if (res && !res.error) {
+        setDoctorInfo(res);
         setClinicForm({
-          clinicTiming: res.data.clinicTiming || "Mon–Sat: 9:00 AM – 6:00 PM",
-          clinicAddress: res.data.clinicAddress || "",
-          consultationAvailability: res.data.consultationAvailability || "In-clinic & Online video consultation"
+          clinicTiming: res.clinicTiming || "Mon–Sat: 9:00 AM – 6:00 PM",
+          clinicAddress: res.clinicAddress || "",
+          consultationAvailability: res.consultationAvailability || "In-clinic & Online video consultation"
         });
-        if (res.data.slots) {
+        if (res.slots) {
           try {
-            setSlots(JSON.parse(res.data.slots));
+            setSlots(JSON.parse(res.slots));
           } catch (e) {
             setSlots([]);
           }
@@ -100,8 +102,8 @@ function DoctorDashboard({ user }) {
 
   const fetchDoctorAppointments = async () => {
     try {
-      const res = await apiClient.get(`/appointments/doctor/${user.username}`);
-      const appts = res.data || [];
+      const res = await appointmentService.getDoctorAppointments(user.username);
+      const appts = res || [];
       setAppointments(appts);
       return appts;
     } catch (err) {
@@ -112,8 +114,8 @@ function DoctorDashboard({ user }) {
 
   const fetchChatPartners = async (apptsOverride) => {
     try {
-      const res = await apiClient.get(`/chat/doctor-partners/${user.username}`);
-      const apiPartners = Array.isArray(res.data) ? res.data : [];
+      const res = await chatService.getDoctorPartners(user.username);
+      const apiPartners = Array.isArray(res) ? res : [];
       if (apiPartners.length > 0) {
         setChatPartners(apiPartners);
         return;
@@ -172,10 +174,7 @@ function DoctorDashboard({ user }) {
 
     const updatedSlots = [...slots, newSlotObj];
     try {
-      await apiClient.post("/doctors/slots", {
-        id: user.id,
-        slots: updatedSlots
-      });
+      await doctorService.updateSlots(user.id, updatedSlots);
       setSlots(updatedSlots);
       setSlotDatetime("");
       setSlotFee("");
@@ -195,10 +194,7 @@ function DoctorDashboard({ user }) {
     });
 
     try {
-      await apiClient.post("/doctors/slots", {
-        id: user.id,
-        slots: updatedSlots
-      });
+      await doctorService.updateSlots(user.id, updatedSlots);
       setSlots(updatedSlots);
       fetchDoctorDetails();
     } catch (err) {
@@ -209,17 +205,17 @@ function DoctorDashboard({ user }) {
   const saveClinicDetails = async (e) => {
     e.preventDefault();
     try {
-      const res = await apiClient.post("/doctors/clinic-details", {
+      const res = await doctorService.updateClinicDetails({
         id: user.id,
         ...clinicForm
       });
-      if (res.data.message === "Clinic details updated successfully") {
+      if (res.message === "Clinic details updated successfully") {
         setClinicSaveSuccess(true);
         setIsEditingClinic(false);
         fetchDoctorDetails();
         setTimeout(() => setClinicSaveSuccess(false), 2500);
       } else {
-        alert(res.data.error || "Failed to save clinic details.");
+        alert(res.error || "Failed to save clinic details.");
       }
     } catch (err) {
       alert("Error saving clinic details.");
@@ -298,13 +294,13 @@ function DoctorDashboard({ user }) {
 
   const handleApproveAppointment = async (id) => {
     try {
-      const res = await apiClient.post("/appointments/approve", { appointmentId: id });
-      if (res.data.message === "Appointment approved successfully") {
+      const res = await appointmentService.approveAppointment(id);
+      if (res.message === "Appointment approved successfully") {
         const appts = await fetchDoctorAppointments();
         await fetchChatPartners(appts);
-        await sendConfirmationEmail(res.data);
+        await sendConfirmationEmail(res);
       } else {
-        alert(res.data.error || "Failed to approve appointment.");
+        alert(res.error || "Failed to approve appointment.");
       }
     } catch (err) {
       alert("Error approving appointment.");
@@ -313,14 +309,14 @@ function DoctorDashboard({ user }) {
 
   const handleCancelAppointment = async (id) => {
     try {
-      const res = await apiClient.post("/appointments/cancel", { appointmentId: id });
-      if (res.data.message === "Appointment cancelled successfully") {
+      const res = await appointmentService.cancelAppointment(id);
+      if (res.message === "Appointment cancelled successfully") {
         fetchDoctorAppointments();
         if (prescriptionForm.appointmentId === id) {
           setPrescriptionForm({ appointmentId: "", patient: "", drug: "", dosage: "", times: "Once Daily" });
         }
       } else {
-        alert(res.data.error || "Failed to cancel appointment.");
+        alert(res.error || "Failed to cancel appointment.");
       }
     } catch (err) {
       alert("Error cancelling appointment.");
@@ -341,14 +337,14 @@ function DoctorDashboard({ user }) {
     }
 
     try {
-      const res = await apiClient.post("/appointments/prescribe", {
+      const res = await appointmentService.issuePrescription({
         appointmentId: prescriptionForm.appointmentId,
         drug: prescriptionForm.drug,
         dosage: prescriptionForm.dosage,
         times: prescriptionForm.times
       });
 
-      if (res.data.message === "Prescription written successfully") {
+      if (res.message === "Prescription written successfully") {
         setSuccessPre(true);
         fetchDoctorAppointments();
         fetchDoctorDetails();
@@ -357,7 +353,7 @@ function DoctorDashboard({ user }) {
           setSuccessPre(false);
         }, 2000);
       } else {
-        alert(res.data.error || "Failed to write prescription.");
+        alert(res.error || "Failed to write prescription.");
       }
     } catch (err) {
       alert("Error submitting prescription.");

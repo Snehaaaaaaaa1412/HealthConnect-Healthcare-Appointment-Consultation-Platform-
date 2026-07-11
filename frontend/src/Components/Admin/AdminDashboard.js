@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { apiClient } from "../../config/api";
+import { adminService } from "../../services/adminService";
 import {
   UserIcon,
   DoctorIcon,
@@ -24,17 +24,17 @@ function AdminDashboard() {
 
   const fetchAdminDossier = async () => {
     try {
-      const statsRes = await apiClient.get("/admin/stats");
-      setStats(statsRes.data);
+      const statsData = await adminService.getStats();
+      setStats(statsData);
 
-      const docRes = await apiClient.get("/admin/doctors");
-      setDoctors(docRes.data || []);
+      const doctorsData = await adminService.getAllDoctors();
+      setDoctors(doctorsData || []);
 
-      const venRes = await apiClient.get("/admin/vendors");
-      setVendors(venRes.data || []);
+      const vendorsData = await adminService.getAllVendors();
+      setVendors(vendorsData || []);
 
-      const analyticsRes = await apiClient.get("/admin/analytics");
-      setAnalytics(analyticsRes.data || null);
+      const analyticsData = await adminService.getAnalytics();
+      setAnalytics(analyticsData || null);
     } catch (err) {
       console.error("Failed to load statutory administration registries.");
     }
@@ -42,13 +42,13 @@ function AdminDashboard() {
 
   const approveDoctor = async (id) => {
     try {
-      await apiClient.post("/admin/approve-doctor", { id });
+      await adminService.approveDoctor(id);
       setDoctors((prev) =>
           prev.map((d) => (d.id === id ? { ...d, status: "approved" } : d))
       );
       // Refresh stats
-      const statsRes = await apiClient.get("/admin/stats");
-      setStats(statsRes.data);
+      const statsData = await adminService.getStats();
+      setStats(statsData);
     } catch (err) {
       alert("Verification signoff failed.");
     }
@@ -56,13 +56,13 @@ function AdminDashboard() {
 
   const approveVendor = async (id) => {
     try {
-      await apiClient.post("/admin/approve-vendor", { id });
+      await adminService.approveVendor(id);
       setVendors((prev) =>
           prev.map((v) => (v.id === id ? { ...v, status: "approved" } : v))
       );
       // Refresh stats
-      const statsRes = await apiClient.get("/admin/stats");
-      setStats(statsRes.data);
+      const statsData = await adminService.getStats();
+      setStats(statsData);
     } catch (err) {
       alert("Verification signoff failed.");
     }
@@ -71,11 +71,11 @@ function AdminDashboard() {
   const deleteDoctor = async (id) => {
     if (!window.confirm("Confirm deletion of practitioner record?")) return;
     try {
-      await apiClient.post("/admin/delete-doctor", { id });
+      await adminService.deleteDoctor(id);
       setDoctors((prev) => prev.filter((d) => d.id !== id));
       // Refresh stats
-      const statsRes = await apiClient.get("/admin/stats");
-      setStats(statsRes.data);
+      const statsData = await adminService.getStats();
+      setStats(statsData);
     } catch (err) {
       alert("Removal request failed.");
     }
@@ -84,11 +84,11 @@ function AdminDashboard() {
   const deleteVendor = async (id) => {
     if (!window.confirm("Confirm deletion of store vendor record?")) return;
     try {
-      await apiClient.post("/admin/delete-vendor", { id });
+      await adminService.deleteVendor(id);
       setVendors((prev) => prev.filter((v) => v.id !== id));
       // Refresh stats
-      const statsRes = await apiClient.get("/admin/stats");
-      setStats(statsRes.data);
+      const statsData = await adminService.getStats();
+      setStats(statsData);
     } catch (err) {
       alert("Removal request failed.");
     }

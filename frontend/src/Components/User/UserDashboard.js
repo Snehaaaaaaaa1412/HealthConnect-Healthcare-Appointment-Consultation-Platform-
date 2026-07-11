@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { apiClient, ocrClient } from "../../config/api";
+import { ocrClient } from "../../config/api";
+import { doctorService } from "../../services/doctorService";
+import { vendorService } from "../../services/vendorService";
+import { appointmentService } from "../../services/appointmentService";
+import { orderService } from "../../services/orderService";
+import { chatService } from "../../services/chatService";
 import {
   DoctorIcon,
   PillsIcon,
@@ -60,8 +65,8 @@ function UserDashboard({ user }) {
 
   const fetchChatPartners = async () => {
     try {
-      const res = await apiClient.get(`/chat/patient-partners/${user.username}`);
-      setChatPartners(res.data || []);
+      const res = await chatService.getPatientPartners(user.username);
+      setChatPartners(res || []);
     } catch (err) {
       console.error("Failed to fetch chat partners:", err);
     }
@@ -78,10 +83,10 @@ function UserDashboard({ user }) {
 
   const fetchApprovedEntities = async () => {
     try {
-      const docRes = await apiClient.get("/public/doctors");
-      setDoctors(docRes.data || []);
-      const storeRes = await apiClient.get("/public/vendors");
-      setStores(storeRes.data || []);
+      const docRes = await doctorService.getPublicDoctors();
+      setDoctors(docRes || []);
+      const storeRes = await vendorService.getPublicVendors();
+      setStores(storeRes || []);
     } catch (err) {
       console.error("Failed to fetch public health directory.");
     }
@@ -89,8 +94,8 @@ function UserDashboard({ user }) {
 
   const fetchUserAppointments = async () => {
     try {
-      const res = await apiClient.get(`/appointments/patient/${user.username}`);
-      setAppointments(res.data || []);
+      const res = await appointmentService.getPatientAppointments(user.username);
+      setAppointments(res || []);
     } catch (err) {
       console.error("Failed to fetch user appointments:", err);
     }
@@ -98,8 +103,8 @@ function UserDashboard({ user }) {
 
   const fetchUserOrders = async () => {
     try {
-      const res = await apiClient.get(`/orders/patient/${user.username}`);
-      setUserOrders(res.data || []);
+      const res = await orderService.getPatientOrders(user.username);
+      setUserOrders(res || []);
     } catch (err) {
       console.error("Failed to fetch user orders:", err);
     }
@@ -246,11 +251,9 @@ function UserDashboard({ user }) {
         formData.append("medicalReport", bookingReportFile);
       }
 
-      const res = await apiClient.post("/appointments/book", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
+      const res = await appointmentService.bookAppointment(formData);
 
-      if (res.data.message === "Appointment booked successfully") {
+      if (res.message === "Appointment booked successfully") {
         setPaymentSuccess(true);
         
         // Remove slot from doctor view state locally
@@ -302,11 +305,9 @@ function UserDashboard({ user }) {
     
     setTimeout(async () => {
       try {
-        const res = await apiClient.post("/appointments/pay", {
-          appointmentId: selectedPayApp.id
-        });
+        const res = await appointmentService.processPayment(selectedPayApp.id);
         
-        if (res.data.message === "Payment processed successfully") {
+        if (res.message === "Payment processed successfully") {
           setPaymentLoading(false);
           setSelectedPayApp(null);
           setPaymentSuccessToast(`Payment Successful for Dr. ${selectedPayApp.doctorFullName} consultation!`);
@@ -317,7 +318,7 @@ function UserDashboard({ user }) {
           }, 5000);
         } else {
           setPaymentLoading(false);
-          alert(res.data.error || "Payment transaction failed.");
+          alert(res.error || "Payment transaction failed.");
         }
       } catch (err) {
         setPaymentLoading(false);
@@ -374,7 +375,7 @@ function UserDashboard({ user }) {
 
         for (const storeId of Object.keys(groups)) {
           const group = groups[storeId];
-          await apiClient.post("/orders/create", {
+          await orderService.createOrder({
             patientUsername: user.username,
             patientFullName: user.fullName || "John Doe",
             vendorId: parseInt(storeId),
@@ -405,11 +406,11 @@ function UserDashboard({ user }) {
 
   const handleReceiveOrder = async (orderId) => {
     try {
-      const res = await apiClient.post("/orders/receive", { orderId });
-      if (res.data.message === "Order received successfully") {
+      const res = await orderService.receiveOrder(orderId);
+      if (res.message === "Order received successfully") {
         fetchUserOrders();
       } else {
-        alert(res.data.error || "Failed to mark order as received.");
+        alert(res.error || "Failed to mark order as received.");
       }
     } catch (err) {
       alert("Error marking order as received.");

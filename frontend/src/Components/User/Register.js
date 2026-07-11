@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiClient } from "../../config/api";
+import { authService } from "../../services/authService";
 import { UserIcon, BackIcon } from "../Icons";
 import "./Register.css";
 
@@ -35,7 +35,7 @@ function UserRegister() {
     }
 
     try {
-      const res = await apiClient.post("/register", {
+      const res = await authService.register({
         fullName,
         username,
         password,
@@ -43,14 +43,14 @@ function UserRegister() {
         email,
         role: "user",
         gender,
-        age: age ? parseInt(age) : null
+        age: parseInt(age) || 0,
       });
 
-      if (res.data.message === "User registered successfully") {
+      if (res.message === "User registered successfully") {
         setMessage("Registration successful! Redirecting to login...");
         setTimeout(() => navigate("/user/login"), 1500);
       } else {
-        setMessage(res.data.message || res.data.error || "Registration failed");
+        setMessage(res.message || res.error || "Registration failed");
       }
     } catch (error) {
       setMessage("Registration failed. Please try again.");

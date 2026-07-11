@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { apiClient } from "../../config/api";
+import { chatService } from "../../services/chatService";
 import { MessageSquareIcon, BookOpenIcon, ClockIcon } from "../Icons";
 
 const formatChatTimeIST = (createdAt) => {
@@ -13,20 +13,17 @@ const formatChatTimeIST = (createdAt) => {
     iso = `${raw}Z`;
   }
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
+  if (isNaN(date.getTime())) return raw;
   return date.toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true
+    dateStyle: "short",
+    timeStyle: "short"
   });
 };
 
 function DoctorPatientChat({
-  currentRole,
   currentUsername,
+  currentRole,
   doctorUsername,
   patientUsername,
   partnerName,
@@ -41,10 +38,8 @@ function DoctorPatientChat({
   const fetchMessages = async () => {
     if (!doctorUsername || !patientUsername) return;
     try {
-      const res = await apiClient.get(
-        `/chat/${doctorUsername}/${patientUsername}`
-      );
-      setMessages(res.data || []);
+      const res = await chatService.getConversation(doctorUsername, patientUsername);
+      setMessages(res || []);
     } catch (err) {
       console.error("Failed to fetch chat messages:", err);
     }
@@ -57,10 +52,8 @@ function DoctorPatientChat({
       return;
     }
     try {
-      const res = await apiClient.get(
-        `/chat/context/${doctorUsername}/${patientUsername}`
-      );
-      setContext(res.data || null);
+      const res = await chatService.getContext(doctorUsername, patientUsername);
+      setContext(res || null);
     } catch (err) {
       console.error("Failed to fetch appointment context:", err);
     }
@@ -84,7 +77,7 @@ function DoctorPatientChat({
     if (!inputText.trim() || sending) return;
     setSending(true);
     try {
-      await apiClient.post("/chat/send", {
+      await chatService.sendMessage({
         doctorUsername,
         patientUsername,
         senderRole: currentRole,

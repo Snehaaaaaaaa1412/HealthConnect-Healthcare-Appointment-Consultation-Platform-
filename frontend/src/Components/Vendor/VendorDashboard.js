@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { apiClient } from "../../config/api";
+import { vendorService } from "../../services/vendorService";
+import { orderService } from "../../services/orderService";
 import {
   VendorIcon,
   PlusIcon,
@@ -22,12 +23,12 @@ function VendorDashboard({ user }) {
 
   const fetchVendorDetails = async () => {
     try {
-      const res = await apiClient.get(`/vendors/${user.id}`);
-      if (res.data && !res.data.error) {
-        setVendorInfo(res.data);
-        if (res.data.inventory) {
+      const res = await vendorService.getVendorById(user.id);
+      if (res && !res.error) {
+        setVendorInfo(res);
+        if (res.inventory) {
           try {
-            setInventory(JSON.parse(res.data.inventory));
+            setInventory(JSON.parse(res.inventory));
           } catch (e) {
             setInventory([]);
           }
@@ -40,8 +41,8 @@ function VendorDashboard({ user }) {
 
   const fetchVendorOrders = async () => {
     try {
-      const res = await apiClient.get(`/orders/vendor/${user.id}`);
-      setOrders(res.data || []);
+      const res = await orderService.getVendorOrders(user.id);
+      setOrders(res || []);
     } catch (err) {
       console.error("Failed to fetch vendor orders:", err);
     }
@@ -55,10 +56,7 @@ function VendorDashboard({ user }) {
 
   const updateInventoryDatabase = async (updatedInv) => {
     try {
-      await apiClient.post("/vendors/inventory", {
-        id: user.id,
-        inventory: updatedInv
-      });
+      await vendorService.updateInventory(user.id, updatedInv);
       setInventory(updatedInv);
       fetchVendorDetails();
     } catch (err) {
@@ -99,12 +97,12 @@ function VendorDashboard({ user }) {
 
   const handleDispatchOrder = async (orderId) => {
     try {
-      const res = await apiClient.post("/orders/dispatch", { orderId });
-      if (res.data.message === "Order dispatched successfully") {
+      const res = await orderService.dispatchOrder(orderId);
+      if (res.message === "Order dispatched successfully") {
         fetchVendorOrders();
         fetchVendorDetails();
       } else {
-        alert(res.data.error || "Failed to dispatch order.");
+        alert(res.error || "Failed to dispatch order.");
       }
     } catch (err) {
       alert("Error dispatching order.");

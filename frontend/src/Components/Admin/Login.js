@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiClient } from "../../config/api";
+import { authService } from "../../services/authService";
 import { AdminIcon, BackIcon } from "../Icons";
 import "./Login.css";
 
@@ -17,7 +17,7 @@ function AdminLogin({ onLogin }) {
     setMessage("");
 
     try {
-      const res = await apiClient.post("/login", {
+      const res = await authService.login({
         username,
         password,
         role: "admin",

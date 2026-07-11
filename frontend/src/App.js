@@ -12,12 +12,6 @@ import VendorRegister from "./Components/Vendor/Register";
 import AdminLogin from "./Components/Admin/Login";
 import Dashboard from "./Components/Dashboard/dashboard";
 
-// Initialize default axios headers if token exists in localStorage on startup
-const savedToken = localStorage.getItem("healthconnect_token");
-if (savedToken) {
-  apiClient.defaults.headers.common["Authorization"] = `Bearer ${savedToken}`;
-}
-
 // Global Axios response interceptor to unpack standard backend ApiResponse success envelopes
 apiClient.interceptors.response.use(
   (response) => {
@@ -52,7 +46,6 @@ function App() {
     localStorage.setItem("healthconnect_role", role);
     if (token) {
       localStorage.setItem("healthconnect_token", token);
-      apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     }
   };
 
@@ -62,7 +55,6 @@ function App() {
     localStorage.removeItem("healthconnect_user");
     localStorage.removeItem("healthconnect_role");
     localStorage.removeItem("healthconnect_token");
-    delete apiClient.defaults.headers.common["Authorization"];
   };
 
   return (

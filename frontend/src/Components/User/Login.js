@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiClient } from "../../config/api";
+import { authService } from "../../services/authService";
 import { UserIcon, BackIcon } from "../Icons";
 import "./Login.css";
 
@@ -34,21 +34,21 @@ function UserLogin({ onLogin }) {
     setMessage("");
 
     try {
-      const res = await apiClient.post("/login", {
+      const res = await authService.login({
         username,
         password,
         role: "user",
       });
 
-      if (res.data.requiresOTP) {
-        setGeneratedOtp(res.data.otpToken); // store otpToken here
-        setTempUser({ email: res.data.email });
+      if (res.requiresOTP) {
+        setGeneratedOtp(res.otpToken); // store otpToken here
+        setTempUser({ email: res.email });
         setShowOtpModal(true);
         setResendCountdown(30);
         setInputOtp("");
         setOtpError("");
       } else {
-        setMessage(res.data.message || res.data.error || "Invalid credentials");
+        setMessage(res.message || res.error || "Invalid credentials");
       }
     } catch (error) {
       setMessage("Login failed. Please check your credentials.");
@@ -62,15 +62,12 @@ function UserLogin({ onLogin }) {
     setIsOtpSending(true);
     setOtpError("");
     try {
-      const res = await apiClient.post("/auth/verify-otp", {
-        otpToken: generatedOtp,
-        otp: inputOtp,
-      });
+      const res = await authService.verifyOtp(generatedOtp, inputOtp);
 
-      if (res.data.message === "Login successful") {
-        onLogin(res.data.user, "user", res.data.token);
+      if (res.message === "Login successful") {
+        onLogin(res.user, "user", res.token);
       } else {
-        setOtpError(res.data.error || "Incorrect 6-digit OTP. Please check your email and try again.");
+        setOtpError(res.error || "Incorrect 6-digit OTP. Please check your email and try again.");
       }
     } catch (err) {
       setOtpError("Verification failed. Please check your code and try again.");
@@ -84,16 +81,14 @@ function UserLogin({ onLogin }) {
     setIsOtpSending(true);
     setOtpError("");
     try {
-      const res = await apiClient.post("/auth/resend-otp", {
-        otpToken: generatedOtp,
-      });
+      const res = await authService.resendOtp(generatedOtp);
 
-      if (res.data.message === "OTP resent successfully") {
+      if (res.message === "OTP resent successfully") {
         setResendCountdown(30);
         setInputOtp("");
         setOtpError("");
       } else {
-        setOtpError(res.data.error || "Failed to resend OTP.");
+        setOtpError(res.error || "Failed to resend OTP.");
       }
     } catch (err) {
       setOtpError("Resend failed. Please try again.");
