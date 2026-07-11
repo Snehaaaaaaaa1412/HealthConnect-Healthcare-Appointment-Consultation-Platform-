@@ -23,16 +23,8 @@ const asyncHandler = require("./src/utils/asyncHandler");
 const ApiResponse = require("./src/utils/ApiResponse");
 const { ValidationError } = require("./src/utils/ApiError");
 const errorMiddleware = require("./src/middleware/errorMiddleware");
-const crypto = require("crypto");
-const otpService = require("./src/services/otpService");
-const emailService = require("./src/services/emailService");
-const jwt = require("jsonwebtoken");
 const { protect } = require("./src/middleware/authMiddleware");
-
-// Helper to sign JWTs
-const generateToken = (payload) => {
-  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
-};
+const apiRouter = require("./src/routes");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -67,110 +59,11 @@ const upload = multer({
 // Database connection and schema initialization are handled by src/config/database.js
 // The db singleton is imported above via require("./src/config/database")
 
-// Register API
 // Apply global auth guard before routing starts (handles whitelist check inside protect)
 app.use(protect);
 
-app.post("/register", async (req, res) => {
-  const { fullName, username, password, mobile, email, role, specialization, storeName, gender, age } = req.body;
-
-  // ── User (Patient) registration → userService → userRepository
-  if (role === "user") {
-    try {
-      const result = await userService.registerUser({ fullName, username, password, mobile, email, gender, age });
-      return res.json(result);
-    } catch (err) {
-      if (err.isUniqueViolation) return res.json({ error: "Username is already taken" });
-      return res.json({ error: err.message });
-    }
-  }
-
-  // ── Doctor registration → doctorService → doctorRepository
-  if (role === "doctor") {
-    try {
-      const result = await doctorService.registerDoctor({ fullName, username, password, mobile, email, specialization });
-      return res.json(result);
-    } catch (err) {
-      if (err.isUniqueViolation) return res.json({ error: "Username is already taken" });
-      return res.json({ error: err.message });
-    }
-  }
-
-  // ── Vendor registration → vendorService → vendorRepository
-  if (role === "vendor") {
-    try {
-      const result = await vendorService.registerVendor({ fullName, username, password, mobile, email, storeName });
-      return res.json(result);
-    } catch (err) {
-      if (err.isUniqueViolation) return res.json({ error: "Username is already taken" });
-      return res.json({ error: err.message });
-    }
-  }
-
-  return res.json({ error: "Invalid role specified" });
-});
-
-// Login API
-app.post("/login", async (req, res) => {
-  const { username, password, role } = req.body;
-
-  // ── Admin authentication (hardcoded credentials — no DB query)
-  if (role === "admin") {
-    if (username === "admin" && password === "admin") {
-      const token = generateToken({ id: 0, username: "admin", role: "admin" });
-      return res.json({
-        message: "Login successful",
-        token,
-        user: { id: 0, fullName: "System Administrator", username: "admin" }
-      });
-    }
-    return res.json({ message: "Invalid credentials" });
-  }
-
-  // ── User (Patient) login → userService → userRepository + otpService + emailService
-  if (role === "user") {
-    try {
-      const cleanUser = await userService.loginUser(username, password);
-      if (!cleanUser) return res.json({ message: "Invalid credentials" });
-
-      const otpToken = crypto.randomUUID();
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-      otpService.storeOtp(otpToken, cleanUser, otp);
-      emailService.sendOtpEmail(cleanUser.email, cleanUser.fullName, otp);
-
-      return res.json({ requiresOTP: true, otpToken, email: cleanUser.email });
-    } catch (err) {
-      return res.json({ message: "Database error: " + err.message });
-    }
-  }
-
-  // ── Vendor login → vendorService → vendorRepository
-  if (role === "vendor") {
-    try {
-      const cleanVendor = await vendorService.loginVendor(username, password);
-      if (!cleanVendor) return res.json({ message: "Invalid credentials" });
-      const token = generateToken({ id: cleanVendor.id, username: cleanVendor.username, role: "vendor" });
-      return res.json({ message: "Login successful", token, user: cleanVendor });
-    } catch (err) {
-      return res.json({ message: "Database error: " + err.message });
-    }
-  }
-
-  // ── Doctor login → doctorService → doctorRepository
-  if (role === "doctor") {
-    try {
-      const cleanDoctor = await doctorService.loginDoctor(username, password);
-      if (!cleanDoctor) return res.json({ message: "Invalid credentials" });
-      const token = generateToken({ id: cleanDoctor.id, username: cleanDoctor.username, role: "doctor" });
-      return res.json({ message: "Login successful", token, user: cleanDoctor });
-    } catch (err) {
-      return res.json({ message: "Database error: " + err.message });
-    }
-  }
-
-  return res.json({ message: "Invalid role specified" });
-});
+// Mount central router
+app.use(apiRouter);
 
 // Admin API: Statistics Dashboard
 app.get("/admin/stats", (req, res) => {
@@ -250,101 +143,7 @@ app.post("/admin/delete-vendor", async (req, res) => {
   }
 });
 
-// Doctor API: Update Clinic Details → doctorService → doctorRepository
-app.post("/doctors/clinic-details", async (req, res) => {
-  try {
-    const { id, clinicTiming, clinicAddress, consultationAvailability } = req.body;
-    const result = await doctorService.updateClinicDetails(id, { clinicTiming, clinicAddress, consultationAvailability });
-    return res.json(result);
-  } catch (err) {
-    return res.json({ error: err.message });
-  }
-});
 
-// Doctor API: Update Availability Slots → doctorService → doctorRepository
-app.post("/doctors/slots", async (req, res) => {
-  try {
-    const { id, slots } = req.body;
-    const result = await doctorService.updateSlots(id, slots);
-    return res.json(result);
-  } catch (err) {
-    return res.json({ error: err.message });
-  }
-});
-
-// Doctor API: Get Details → doctorService → doctorRepository
-app.get("/doctors/:id", async (req, res) => {
-  try {
-    const doctor = await doctorService.getDoctorById(req.params.id);
-    if (doctor) return res.json(doctor);
-    return res.json({ error: "Doctor not found" });
-  } catch (err) {
-    return res.json({ error: err.message });
-  }
-});
-
-// Doctor API: Update Specialization → doctorService → doctorRepository
-app.post("/doctors/update-specialization", async (req, res) => {
-  try {
-    const { id, specialization } = req.body;
-    const result = await doctorService.updateSpecialization(id, specialization);
-    return res.json(result);
-  } catch (err) {
-    return res.json({ error: err.message });
-  }
-});
-
-// Vendor API: Get Details → vendorService → vendorRepository
-app.get("/vendors/:id", async (req, res) => {
-  try {
-    const vendor = await vendorService.getVendorById(req.params.id);
-    if (vendor) return res.json(vendor);
-    return res.json({ error: "Vendor not found" });
-  } catch (err) {
-    return res.json({ error: err.message });
-  }
-});
-
-// Vendor API: Update Inventory Stock → vendorService → vendorRepository + medicineRepository
-app.post("/vendors/inventory", async (req, res) => {
-  try {
-    const result = await vendorService.updateInventory(req.body.id, req.body.inventory);
-    return res.json(result);
-  } catch (err) {
-    return res.json({ error: err.message });
-  }
-});
-
-// Public / User Directory APIs: Get All Approved Doctors → doctorService → doctorRepository
-app.get("/public/doctors", async (req, res) => {
-  try {
-    const rows = await doctorService.getApprovedDoctors();
-    return res.json(rows);
-  } catch (err) {
-    return res.json({ error: err.message });
-  }
-});
-
-// Public / User Directory APIs: Get All Approved Vendors → vendorService → vendorRepository
-app.get("/public/vendors", async (req, res) => {
-  try {
-    const rows = await vendorService.getApprovedVendors();
-    return res.json(rows);
-  } catch (err) {
-    return res.json({ error: err.message });
-  }
-});
-
-// Get patient profile → userService → userRepository
-app.get("/users/:username", async (req, res) => {
-  try {
-    const user = await userService.getUserByUsername(req.params.username);
-    if (user) return res.json(user);
-    return res.json({ error: "User not found" });
-  } catch (err) {
-    return res.json({ error: err.message });
-  }
-});
 
 // Appointment booking endpoint (transactional lock, optional medical report upload)
 app.post("/appointments/book", upload.single("medicalReport"), (req, res) => {
@@ -926,34 +725,7 @@ app.get("/health", asyncHandler(async (req, res) => {
   res.json(ApiResponse.success({ status: "UP", database: "connected" }));
 }));
 
-// OTP Verification API → verify OTP and log user in
-app.post("/auth/verify-otp", asyncHandler(async (req, res) => {
-  const { otpToken, otp } = req.body;
-  const verifiedUser = otpService.verifyOtp(otpToken, otp);
 
-  if (!verifiedUser) {
-    return res.json({ error: "Incorrect 6-digit OTP. Please check your email and try again." });
-  }
-
-  const token = generateToken({ id: verifiedUser.id, username: verifiedUser.username, role: "user" });
-  return res.json({ message: "Login successful", token, user: verifiedUser });
-}));
-
-// OTP Resend API → generate new OTP and email it
-app.post("/auth/resend-otp", asyncHandler(async (req, res) => {
-  const { otpToken } = req.body;
-  const stored = otpService.getStored(otpToken);
-
-  if (!stored) {
-    return res.json({ error: "OTP request session expired. Please log in again." });
-  }
-
-  const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpService.updateOtp(otpToken, newOtp);
-  emailService.sendOtpEmail(stored.user.email, stored.user.fullName, newOtp);
-
-  return res.json({ message: "OTP resent successfully" });
-}));
 
 // Global error handling middleware
 app.use(errorMiddleware);
