@@ -16,6 +16,7 @@ require("dotenv").config(); // Must be called before any other require reads pro
 const env = require("./src/config/env");
 const app = require("./app");
 const db = require("./src/config/database");
+const userService = require("./src/services/userService");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -51,17 +52,21 @@ const upload = multer({
 // The db singleton is imported above via require("./src/config/database")
 
 // Register API
-app.post("/register", (req, res) => {
+app.post("/register", async (req, res) => {
   const { fullName, username, password, mobile, email, role, specialization, storeName, gender, age } = req.body;
 
-  let tableName = "";
-  if (role === "user") tableName = "users";
-  else if (role === "doctor") tableName = "doctors";
-  else if (role === "vendor") tableName = "vendors";
-  else {
-    return res.json({ error: "Invalid role specified" });
+  // ── User (Patient) registration → userService → userRepository
+  if (role === "user") {
+    try {
+      const result = await userService.registerUser({ fullName, username, password, mobile, email, gender, age });
+      return res.json(result);
+    } catch (err) {
+      if (err.isUniqueViolation) return res.json({ error: "Username is already taken" });
+      return res.json({ error: err.message });
+    }
   }
 
+  // ── Doctor registration (raw SQL — migrated in a future milestone)
   if (role === "doctor") {
     const specValue = specialization || "General Practitioner";
     db.run(
@@ -77,7 +82,11 @@ app.post("/register", (req, res) => {
         res.json({ message: "User registered successfully" });
       }
     );
-  } else if (role === "vendor") {
+    return;
+  }
+
+  // ── Vendor registration (raw SQL — migrated in a future milestone)
+  if (role === "vendor") {
     db.run(
       `INSERT INTO vendors (fullName, username, password, mobile, email, storeName) VALUES (?, ?, ?, ?, ?, ?)`,
       [fullName, username, password, mobile, email, storeName || "Health Pharmacy"],
@@ -91,61 +100,53 @@ app.post("/register", (req, res) => {
         res.json({ message: "User registered successfully" });
       }
     );
-  } else {
-    db.run(
-      `INSERT INTO ${tableName} (fullName, username, password, mobile, email, gender, age) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [fullName, username, password, mobile, email, gender || "Unspecified", age ? parseInt(age) : null],
-      function (err) {
-        if (err) {
-          if (err.message.includes("UNIQUE")) {
-            return res.json({ error: "Username is already taken" });
-          }
-          return res.json({ error: err.message });
-        }
-        res.json({ message: "User registered successfully" });
-      }
-    );
+    return;
   }
+
+  return res.json({ error: "Invalid role specified" });
 });
 
 // Login API
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const { username, password, role } = req.body;
 
-  // Direct Admin authentication with "admin" default credentials
+  // ── Admin authentication (hardcoded credentials — no DB query)
   if (role === "admin") {
     if (username === "admin" && password === "admin") {
       return res.json({
         message: "Login successful",
         user: { id: 0, fullName: "System Administrator", username: "admin" }
       });
-    } else {
-      return res.json({ message: "Invalid credentials" });
+    }
+    return res.json({ message: "Invalid credentials" });
+  }
+
+  // ── User (Patient) login → userService → userRepository
+  if (role === "user") {
+    try {
+      const cleanUser = await userService.loginUser(username, password);
+      if (!cleanUser) return res.json({ message: "Invalid credentials" });
+      return res.json({ message: "Login successful", user: cleanUser });
+    } catch (err) {
+      return res.json({ message: "Database error: " + err.message });
     }
   }
 
+  // ── Doctor / Vendor login (raw SQL — migrated in a future milestone)
   let tableName = "";
-  if (role === "user") tableName = "users";
-  else if (role === "doctor") tableName = "doctors";
+  if (role === "doctor") tableName = "doctors";
   else if (role === "vendor") tableName = "vendors";
-  else {
-    return res.json({ message: "Invalid role specified" });
-  }
+  else return res.json({ message: "Invalid role specified" });
 
   db.get(
     `SELECT * FROM ${tableName} WHERE username = ? AND password = ?`,
     [username, password],
     (err, row) => {
-      if (err) {
-        return res.json({ message: "Database error: " + err.message });
-      }
+      if (err) return res.json({ message: "Database error: " + err.message });
       if (row) {
         // Return details, strip password out
         const { password: _, ...cleanUser } = row;
-        res.json({
-          message: "Login successful",
-          user: cleanUser
-        });
+        res.json({ message: "Login successful", user: cleanUser });
       } else {
         res.json({ message: "Invalid credentials" });
       }
@@ -325,17 +326,15 @@ app.get("/public/vendors", (req, res) => {
   });
 });
 
-// Get patient profile (for email / chat)
-app.get("/users/:username", (req, res) => {
-  db.get(
-    "SELECT id, fullName, username, email, mobile, gender, age FROM users WHERE username = ?",
-    [req.params.username],
-    (err, row) => {
-      if (err) return res.json({ error: err.message });
-      if (row) res.json(row);
-      else res.json({ error: "User not found" });
-    }
-  );
+// Get patient profile → userService → userRepository
+app.get("/users/:username", async (req, res) => {
+  try {
+    const user = await userService.getUserByUsername(req.params.username);
+    if (user) return res.json(user);
+    return res.json({ error: "User not found" });
+  } catch (err) {
+    return res.json({ error: err.message });
+  }
 });
 
 // Appointment booking endpoint (transactional lock, optional medical report upload)
