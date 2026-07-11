@@ -19,6 +19,9 @@ const db = require("./src/config/database");
 const userService  = require("./src/services/userService");
 const vendorService = require("./src/services/vendorService");
 const doctorService = require("./src/services/doctorService");
+const asyncHandler = require("./src/utils/asyncHandler");
+const ApiResponse = require("./src/utils/ApiResponse");
+const { ValidationError } = require("./src/utils/ApiError");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -889,6 +892,14 @@ app.get("/chat/:doctorUsername/:patientUsername", (req, res) => {
     }
   );
 });
+
+// Health check endpoint (exercises asyncHandler, ApiResponse, and ValidationError)
+app.get("/health", asyncHandler(async (req, res) => {
+  if (req.query.triggerError === "validation") {
+    throw new ValidationError("Intentional validation error for testing M1.2");
+  }
+  res.json(ApiResponse.success({ status: "UP", database: "connected" }));
+}));
 
 // Multer error handler
 app.use((err, req, res, next) => {
