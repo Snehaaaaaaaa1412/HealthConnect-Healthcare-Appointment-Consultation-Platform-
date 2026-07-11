@@ -24,7 +24,7 @@ function VendorLogin({ onLogin }) {
       });
 
       if (res.data.message === "Login successful") {
-        onLogin(res.data.user, "vendor");
+        onLogin(res.data.user, "vendor", res.data.token);
       } else {
         setMessage(res.data.message || "Invalid credentials");
       }

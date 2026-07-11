@@ -24,7 +24,7 @@ function AdminLogin({ onLogin }) {
       });
 
       if (res.data.message === "Login successful") {
-        onLogin(res.data.user, "admin");
+        onLogin(res.data.user, "admin", res.data.token);
       } else {
         setMessage(res.data.message || "Invalid administrative credentials");
       }

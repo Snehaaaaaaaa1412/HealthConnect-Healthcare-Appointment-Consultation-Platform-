@@ -24,7 +24,7 @@ function DoctorLogin({ onLogin }) {
       });
 
       if (res.data.message === "Login successful") {
-        onLogin(res.data.user, "doctor");
+        onLogin(res.data.user, "doctor", res.data.token);
       } else {
         setMessage(res.data.message || "Invalid credentials");
       }

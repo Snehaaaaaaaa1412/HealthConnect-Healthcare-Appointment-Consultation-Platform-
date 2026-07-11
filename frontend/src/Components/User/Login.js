@@ -68,7 +68,7 @@ function UserLogin({ onLogin }) {
       });
 
       if (res.data.message === "Login successful") {
-        onLogin(res.data.user, "user");
+        onLogin(res.data.user, "user", res.data.token);
       } else {
         setOtpError(res.data.error || "Incorrect 6-digit OTP. Please check your email and try again.");
       }

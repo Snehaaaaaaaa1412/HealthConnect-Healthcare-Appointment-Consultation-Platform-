@@ -26,6 +26,13 @@ const errorMiddleware = require("./src/middleware/errorMiddleware");
 const crypto = require("crypto");
 const otpService = require("./src/services/otpService");
 const emailService = require("./src/services/emailService");
+const jwt = require("jsonwebtoken");
+const { protect } = require("./src/middleware/authMiddleware");
+
+// Helper to sign JWTs
+const generateToken = (payload) => {
+  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
+};
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -61,6 +68,9 @@ const upload = multer({
 // The db singleton is imported above via require("./src/config/database")
 
 // Register API
+// Apply global auth guard before routing starts (handles whitelist check inside protect)
+app.use(protect);
+
 app.post("/register", async (req, res) => {
   const { fullName, username, password, mobile, email, role, specialization, storeName, gender, age } = req.body;
 
@@ -107,8 +117,10 @@ app.post("/login", async (req, res) => {
   // ── Admin authentication (hardcoded credentials — no DB query)
   if (role === "admin") {
     if (username === "admin" && password === "admin") {
+      const token = generateToken({ id: 0, username: "admin", role: "admin" });
       return res.json({
         message: "Login successful",
+        token,
         user: { id: 0, fullName: "System Administrator", username: "admin" }
       });
     }
@@ -138,7 +150,8 @@ app.post("/login", async (req, res) => {
     try {
       const cleanVendor = await vendorService.loginVendor(username, password);
       if (!cleanVendor) return res.json({ message: "Invalid credentials" });
-      return res.json({ message: "Login successful", user: cleanVendor });
+      const token = generateToken({ id: cleanVendor.id, username: cleanVendor.username, role: "vendor" });
+      return res.json({ message: "Login successful", token, user: cleanVendor });
     } catch (err) {
       return res.json({ message: "Database error: " + err.message });
     }
@@ -149,7 +162,8 @@ app.post("/login", async (req, res) => {
     try {
       const cleanDoctor = await doctorService.loginDoctor(username, password);
       if (!cleanDoctor) return res.json({ message: "Invalid credentials" });
-      return res.json({ message: "Login successful", user: cleanDoctor });
+      const token = generateToken({ id: cleanDoctor.id, username: cleanDoctor.username, role: "doctor" });
+      return res.json({ message: "Login successful", token, user: cleanDoctor });
     } catch (err) {
       return res.json({ message: "Database error: " + err.message });
     }
@@ -921,7 +935,8 @@ app.post("/auth/verify-otp", asyncHandler(async (req, res) => {
     return res.json({ error: "Incorrect 6-digit OTP. Please check your email and try again." });
   }
 
-  return res.json({ message: "Login successful", user: verifiedUser });
+  const token = generateToken({ id: verifiedUser.id, username: verifiedUser.username, role: "user" });
+  return res.json({ message: "Login successful", token, user: verifiedUser });
 }));
 
 // OTP Resend API → generate new OTP and email it

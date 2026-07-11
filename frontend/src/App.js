@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import axios from "axios";
 import Index from "./Components/Index";
 import UserLogin from "./Components/User/Login";
 import UserRegister from "./Components/User/Register";
@@ -9,6 +10,12 @@ import VendorLogin from "./Components/Vendor/Login";
 import VendorRegister from "./Components/Vendor/Register";
 import AdminLogin from "./Components/Admin/Login";
 import Dashboard from "./Components/Dashboard/dashboard";
+
+// Initialize default axios headers if token exists in localStorage on startup
+const savedToken = localStorage.getItem("healthconnect_token");
+if (savedToken) {
+  axios.defaults.headers.common["Authorization"] = `Bearer ${savedToken}`;
+}
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -20,11 +27,15 @@ function App() {
     return localStorage.getItem("healthconnect_role") || null;
   });
 
-  const handleLogin = (userData, role) => {
+  const handleLogin = (userData, role, token) => {
     setUser(userData);
     setUserRole(role);
     localStorage.setItem("healthconnect_user", JSON.stringify(userData));
     localStorage.setItem("healthconnect_role", role);
+    if (token) {
+      localStorage.setItem("healthconnect_token", token);
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    }
   };
 
   const handleLogout = () => {
@@ -32,6 +43,8 @@ function App() {
     setUserRole(null);
     localStorage.removeItem("healthconnect_user");
     localStorage.removeItem("healthconnect_role");
+    localStorage.removeItem("healthconnect_token");
+    delete axios.defaults.headers.common["Authorization"];
   };
 
   return (
