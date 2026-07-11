@@ -22,6 +22,7 @@ const doctorService = require("./src/services/doctorService");
 const asyncHandler = require("./src/utils/asyncHandler");
 const ApiResponse = require("./src/utils/ApiResponse");
 const { ValidationError } = require("./src/utils/ApiError");
+const errorMiddleware = require("./src/middleware/errorMiddleware");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -901,13 +902,8 @@ app.get("/health", asyncHandler(async (req, res) => {
   res.json(ApiResponse.success({ status: "UP", database: "connected" }));
 }));
 
-// Multer error handler
-app.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError || err.message === "Only PDF and image files are allowed") {
-    return res.status(400).json({ error: err.message });
-  }
-  next(err);
-});
+// Global error handling middleware
+app.use(errorMiddleware);
 
 // Start server — port sourced from environment variable via src/config/env.js
 app.listen(env.PORT, () => {
