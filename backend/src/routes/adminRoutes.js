@@ -4,6 +4,12 @@ const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/adminController");
 const { restrictTo } = require("../middleware/authMiddleware");
+const validate = require("../middleware/validationMiddleware");
+
+// Validation Schemas
+const idSchema = {
+  id: { required: true, type: "number" }
+};
 
 // Protect all admin routes under the "admin" role guard
 router.use("/admin", restrictTo("admin"));
@@ -18,16 +24,16 @@ router.get("/admin/doctors", adminController.getDoctors);
 router.get("/admin/vendors", adminController.getVendors);
 
 // Admin API: Approve Doctor Profile
-router.post("/admin/approve-doctor", adminController.approveDoctor);
+router.post("/admin/approve-doctor", validate(idSchema), adminController.approveDoctor);
 
 // Admin API: Approve Vendor Profile
-router.post("/admin/approve-vendor", adminController.approveVendor);
+router.post("/admin/approve-vendor", validate(idSchema), adminController.approveVendor);
 
 // Admin API: Delete Practitioner
-router.post("/admin/delete-doctor", adminController.deleteDoctor);
+router.post("/admin/delete-doctor", validate(idSchema), adminController.deleteDoctor);
 
 // Admin API: Delete Store
-router.post("/admin/delete-vendor", adminController.deleteVendor);
+router.post("/admin/delete-vendor", validate(idSchema), adminController.deleteVendor);
 
 // Admin Analytics API: Balance and Earnings Statistics
 router.get("/admin/analytics", adminController.getAnalytics);
