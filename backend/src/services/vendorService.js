@@ -31,6 +31,7 @@
 
 const vendorRepository  = require("../repositories/vendorRepository");
 const medicineRepository = require("../repositories/medicineRepository");
+const bcrypt = require("bcryptjs");
 
 const vendorService = {
 
@@ -44,7 +45,8 @@ const vendorService = {
    */
   registerVendor: async ({ fullName, username, password, mobile, email, storeName }) => {
     try {
-      await vendorRepository.create({ fullName, username, password, mobile, email, storeName });
+      const hashedPassword = await bcrypt.hash(password, 12);
+      await vendorRepository.create({ fullName, username, password: hashedPassword, mobile, email, storeName });
       return { message: "User registered successfully" };
     } catch (err) {
       if (err.message && err.message.includes("UNIQUE")) {
@@ -59,7 +61,6 @@ const vendorService = {
   /**
    * Authenticate a vendor by username and plaintext password.
    * Returns cleaned vendor object (password stripped) or null if invalid.
-   * NOTE: TODO M13 — replace line below with bcrypt.compare()
    *
    * @param {string} username
    * @param {string} password
@@ -67,7 +68,9 @@ const vendorService = {
    */
   loginVendor: async (username, password) => {
     const vendor = await vendorRepository.findByUsername(username);
-    if (!vendor || vendor.password !== password) return null; // TODO M13: bcrypt.compare()
+    if (!vendor) return null;
+    const isMatch = await bcrypt.compare(password, vendor.password);
+    if (!isMatch) return null;
     const { password: _, ...cleanVendor } = vendor;
     return cleanVendor;
   },

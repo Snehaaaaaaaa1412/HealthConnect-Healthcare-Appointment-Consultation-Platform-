@@ -16,6 +16,7 @@
  */
 
 const doctorRepository = require("../repositories/doctorRepository");
+const bcrypt = require("bcryptjs");
 
 const doctorService = {
 
@@ -29,7 +30,8 @@ const doctorService = {
    */
   registerDoctor: async ({ fullName, username, password, mobile, email, specialization }) => {
     try {
-      await doctorRepository.create({ fullName, username, password, mobile, email, specialization });
+      const hashedPassword = await bcrypt.hash(password, 12);
+      await doctorRepository.create({ fullName, username, password: hashedPassword, mobile, email, specialization });
       return { message: "User registered successfully" };
     } catch (err) {
       if (err.message && err.message.includes("UNIQUE")) {
@@ -44,7 +46,6 @@ const doctorService = {
   /**
    * Authenticate a doctor by username and plaintext password.
    * Returns cleaned doctor object (password stripped) or null if invalid.
-   * NOTE: TODO M13 — replace with bcrypt.compare()
    *
    * @param {string} username
    * @param {string} password
@@ -52,7 +53,9 @@ const doctorService = {
    */
   loginDoctor: async (username, password) => {
     const doctor = await doctorRepository.findByUsername(username);
-    if (!doctor || doctor.password !== password) return null; // TODO M13: bcrypt.compare()
+    if (!doctor) return null;
+    const isMatch = await bcrypt.compare(password, doctor.password);
+    if (!isMatch) return null;
     const { password: _, ...cleanDoctor } = doctor;
     return cleanDoctor;
   },

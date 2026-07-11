@@ -30,6 +30,7 @@
  */
 
 const userRepository = require("../repositories/userRepository");
+const bcrypt = require("bcryptjs");
 
 const userService = {
   /**
@@ -41,7 +42,8 @@ const userService = {
    */
   registerUser: async ({ fullName, username, password, mobile, email, gender, age }) => {
     try {
-      await userRepository.create({ fullName, username, password, mobile, email, gender, age });
+      const hashedPassword = await bcrypt.hash(password, 12);
+      await userRepository.create({ fullName, username, password: hashedPassword, mobile, email, gender, age });
       return { message: "User registered successfully" };
     } catch (err) {
       if (err.message && err.message.includes("UNIQUE")) {
@@ -56,10 +58,6 @@ const userService = {
   /**
    * Authenticate a patient by username and plaintext password.
    *
-   * NOTE: Plaintext comparison is intentional — it preserves the
-   * current application behaviour. bcrypt will replace line 58
-   * in Milestone 13. Nothing else in this file changes.
-   *
    * @param {string} username
    * @param {string} password
    * @returns {Promise<Object|null>} Cleaned user object (no password), or null if invalid
@@ -67,7 +65,8 @@ const userService = {
   loginUser: async (username, password) => {
     const user = await userRepository.findByUsername(username);
     if (!user) return null;
-    if (user.password !== password) return null; // TODO M13: replace with bcrypt.compare()
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return null;
     const { password: _, ...cleanUser } = user;
     return cleanUser;
   },
