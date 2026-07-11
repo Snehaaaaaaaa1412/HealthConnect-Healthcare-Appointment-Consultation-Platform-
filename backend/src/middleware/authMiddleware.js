@@ -77,7 +77,7 @@ const authMiddleware = {
     return (req, res, next) => {
       if (!req.user || !roles.includes(req.user.role)) {
         return next(
-          new ApiError(403, "FORBIDDEN_ACCESS", "You do not have permission to perform this action.")
+          new ApiError("You do not have permission to perform this action.", 403, "FORBIDDEN_ACCESS")
         );
       }
       next();
