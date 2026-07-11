@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { apiClient } from "./config/api";
 import { ROUTES } from "./constants/routes";
+import { useAuth } from "./context/AuthContext";
 import Index from "./Components/Index";
 import UserLogin from "./Components/User/Login";
 import UserRegister from "./Components/User/Register";
@@ -30,32 +31,7 @@ apiClient.interceptors.response.use(
 );
 
 function App() {
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem("healthconnect_user");
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-
-  const [userRole, setUserRole] = useState(() => {
-    return localStorage.getItem("healthconnect_role") || null;
-  });
-
-  const handleLogin = (userData, role, token) => {
-    setUser(userData);
-    setUserRole(role);
-    localStorage.setItem("healthconnect_user", JSON.stringify(userData));
-    localStorage.setItem("healthconnect_role", role);
-    if (token) {
-      localStorage.setItem("healthconnect_token", token);
-    }
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    setUserRole(null);
-    localStorage.removeItem("healthconnect_user");
-    localStorage.removeItem("healthconnect_role");
-    localStorage.removeItem("healthconnect_token");
-  };
+  const { user, login } = useAuth();
 
   return (
     <Router>
@@ -64,7 +40,7 @@ function App() {
         
         <Route 
           path={ROUTES.USER_LOGIN} 
-          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <UserLogin onLogin={handleLogin} />} 
+          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <UserLogin onLogin={login} />} 
         />
         <Route 
           path={ROUTES.USER_REGISTER} 
@@ -73,7 +49,7 @@ function App() {
         
         <Route 
           path={ROUTES.DOCTOR_LOGIN} 
-          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <DoctorLogin onLogin={handleLogin} />} 
+          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <DoctorLogin onLogin={login} />} 
         />
         <Route 
           path={ROUTES.DOCTOR_REGISTER} 
@@ -82,7 +58,7 @@ function App() {
         
         <Route 
           path={ROUTES.VENDOR_LOGIN} 
-          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <VendorLogin onLogin={handleLogin} />} 
+          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <VendorLogin onLogin={login} />} 
         />
         <Route 
           path={ROUTES.VENDOR_REGISTER} 
@@ -91,14 +67,14 @@ function App() {
         
         <Route 
           path={ROUTES.ADMIN_LOGIN} 
-          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <AdminLogin onLogin={handleLogin} />} 
+          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <AdminLogin onLogin={login} />} 
         />
         
         <Route 
           path={ROUTES.DASHBOARD} 
           element={
             user ? (
-              <Dashboard user={user} role={userRole} onLogout={handleLogout} />
+              <Dashboard />
             ) : (
               <Navigate to={ROUTES.HOME} replace />
             )

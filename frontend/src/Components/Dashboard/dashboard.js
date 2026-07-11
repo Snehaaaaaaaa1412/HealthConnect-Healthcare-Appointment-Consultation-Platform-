@@ -1,4 +1,5 @@
 import React from "react";
+import { useAuth } from "../../context/AuthContext";
 import UserDashboard from "../User/UserDashboard";
 import DoctorDashboard from "../Doctor/DoctorDashboard";
 import VendorDashboard from "../Vendor/VendorDashboard";
@@ -13,7 +14,8 @@ import {
 } from "../Icons";
 import "./dashboard.css";
 
-function Dashboard({ user, role, onLogout }) {
+function Dashboard() {
+  const { user, role, logout } = useAuth();
   const getRoleTitle = () => {
     switch (role) {
       case "user":
@@ -80,7 +82,7 @@ function Dashboard({ user, role, onLogout }) {
           <span className="profile-session-username">
             Session: <strong>{user.username}</strong>
           </span>
-          <button className="btn btn-secondary btn-sm logout-btn" onClick={onLogout}>
+          <button className="btn btn-secondary btn-sm logout-btn" onClick={logout}>
             <LogoutIcon size={16} />
             <span>Terminate Session</span>
           </button>

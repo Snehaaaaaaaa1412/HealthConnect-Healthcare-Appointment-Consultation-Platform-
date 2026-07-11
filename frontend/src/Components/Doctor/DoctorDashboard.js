@@ -19,8 +19,11 @@ import {
 import "../Dashboard/dashboard.css";
 import { BarChart, LineChart, DonutChart } from "../Analytics/AnalyticsCharts";
 import DoctorPatientChat from "../Chat/DoctorPatientChat";
+import { useAuth } from "../../context/AuthContext";
 
-function DoctorDashboard({ user }) {
+function DoctorDashboard({ user: propUser }) {
+  const { user: contextUser } = useAuth();
+  const user = propUser || contextUser;
   const [activeTab, setActiveTab] = useState("overview");
   const [doctorInfo, setDoctorInfo] = useState(user);
   const [slots, setSlots] = useState([]);

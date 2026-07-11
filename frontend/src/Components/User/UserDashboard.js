@@ -24,8 +24,11 @@ import {
 import "../Dashboard/dashboard.css";
 import { BarChart, LineChart, DonutChart } from "../Analytics/AnalyticsCharts";
 import DoctorPatientChat from "../Chat/DoctorPatientChat";
+import { useAuth } from "../../context/AuthContext";
 
-function UserDashboard({ user }) {
+function UserDashboard({ user: propUser }) {
+  const { user: contextUser } = useAuth();
+  const user = propUser || contextUser;
   const [activeTab, setActiveTab] = useState("home");
   const [symptomInput, setSymptomInput] = useState("");
   const [chatLog, setChatLog] = useState([

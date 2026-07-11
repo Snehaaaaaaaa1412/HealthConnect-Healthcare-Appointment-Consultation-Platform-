@@ -12,8 +12,11 @@ import {
 } from "../Icons";
 import "../Dashboard/dashboard.css";
 import { BarChart, LineChart, DonutChart } from "../Analytics/AnalyticsCharts";
+import { useAuth } from "../../context/AuthContext";
 
-function VendorDashboard({ user }) {
+function VendorDashboard({ user: propUser }) {
+  const { user: contextUser } = useAuth();
+  const user = propUser || contextUser;
   const storeName = user.storeName || "Health Pharmacy";
   const [activeTab, setActiveTab] = useState("inventory");
   const [vendorInfo, setVendorInfo] = useState(user);
