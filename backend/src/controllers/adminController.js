@@ -1,6 +1,6 @@
 "use strict";
 
-const db = require("../config/database");
+const adminService = require("../services/adminService");
 const doctorService = require("../services/doctorService");
 const vendorService = require("../services/vendorService");
 const asyncHandler = require("../utils/asyncHandler");
@@ -10,24 +10,15 @@ const adminController = {
    * Get stats count for dashboard (users, doctors, vendors)
    */
   getStats: asyncHandler(async (req, res) => {
-    db.get(
-      `SELECT 
-        (SELECT COUNT(*) FROM users) as usersCount,
-        (SELECT COUNT(*) FROM doctors) as doctorsCount,
-        (SELECT COUNT(*) FROM vendors) as vendorsCount`,
-      [],
-      (err, row) => {
-        if (err) return res.json({ error: err.message });
-        res.json(row || { usersCount: 0, doctorsCount: 0, vendorsCount: 0 });
-      }
-    );
+    const stats = await adminService.getStats();
+    res.json(stats);
   }),
 
   /**
    * Get all doctors (for admin panel)
    */
   getDoctors: asyncHandler(async (req, res) => {
-    const doctors = await doctorService.getAllDoctors();
+    const doctors = await doctorService.getAllForAdmin();
     return res.json(doctors);
   }),
 
@@ -35,7 +26,7 @@ const adminController = {
    * Get all vendors (for admin panel)
    */
   getVendors: asyncHandler(async (req, res) => {
-    const vendors = await vendorService.getAllVendors();
+    const vendors = await vendorService.getAllForAdmin();
     return res.json(vendors);
   }),
 
@@ -72,16 +63,11 @@ const adminController = {
   }),
 
   /**
-   * Get balance and earnings analytics (doctors and vendors)
+   * Get balance and earnings analytics (platform financials report)
    */
   getAnalytics: asyncHandler(async (req, res) => {
-    db.all(`SELECT id, fullName, balance, 'doctor' as role FROM doctors`, [], (err1, doctors) => {
-      if (err1) return res.json({ error: err1.message });
-      db.all(`SELECT id, fullName, balance, 'vendor' as role FROM vendors`, [], (err2, vendors) => {
-        if (err2) return res.json({ error: err2.message });
-        res.json({ doctors: doctors || [], vendors: vendors || [] });
-      });
-    });
+    const report = await adminService.getAnalyticsReport();
+    res.json(report);
   })
 };
 

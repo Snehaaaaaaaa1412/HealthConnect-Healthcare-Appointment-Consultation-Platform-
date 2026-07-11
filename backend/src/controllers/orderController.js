@@ -1,6 +1,6 @@
 "use strict";
 
-const db = require("../config/database");
+const orderService = require("../services/orderService");
 const asyncHandler = require("../utils/asyncHandler");
 
 const orderController = {
@@ -19,65 +19,34 @@ const orderController = {
       address
     } = req.body;
 
-    const numericAmount = parseFloat(totalAmount) || 0.0;
-    const platformCut = numericAmount * 0.10; // 10% Platform Commission
-    const vendorPayout = numericAmount * 0.90; // 90% Vendor Split Payout
-
-    db.serialize(() => {
-      db.run("BEGIN IMMEDIATE TRANSACTION");
-      db.run(
-        `INSERT INTO orders (patientUsername, patientFullName, vendorId, vendorStoreName, vendorPhone, items, totalAmount, address, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
-        [patientUsername, patientFullName, vendorId, vendorStoreName, vendorPhone, JSON.stringify(items), numericAmount, address],
-        function (err) {
-          if (err) {
-            db.run("ROLLBACK");
-            return res.json({ error: err.message });
-          }
-
-          // Update Vendor Balance
-          db.run(
-            "UPDATE vendors SET balance = balance + ? WHERE id = ?",
-            [vendorPayout, vendorId],
-            (err2) => {
-              if (err2) {
-                db.run("ROLLBACK");
-                return res.json({ error: "Failed to transfer split payment to vendor: " + err2.message });
-              }
-              db.run("COMMIT");
-              res.json({ message: "Order placed successfully", platformCommission: platformCut, vendorPayout: vendorPayout });
-            }
-          );
-        }
-      );
+    const result = await orderService.createOrder({
+      patientUsername,
+      patientFullName,
+      vendorId,
+      vendorStoreName,
+      vendorPhone,
+      items,
+      totalAmount,
+      address
     });
+
+    res.json(result);
   }),
 
   /**
    * Get patient order history
    */
   getPatientOrders: asyncHandler(async (req, res) => {
-    db.all(
-      `SELECT * FROM orders WHERE patientUsername = ? ORDER BY id DESC`,
-      [req.params.username],
-      (err, rows) => {
-        if (err) return res.json({ error: err.message });
-        res.json(rows);
-      }
-    );
+    const orders = await orderService.getPatientOrders(req.params.username);
+    res.json(orders);
   }),
 
   /**
    * Get vendor order history
    */
   getVendorOrders: asyncHandler(async (req, res) => {
-    db.all(
-      `SELECT * FROM orders WHERE vendorId = ? ORDER BY id DESC`,
-      [req.params.vendorId],
-      (err, rows) => {
-        if (err) return res.json({ error: err.message });
-        res.json(rows);
-      }
-    );
+    const orders = await orderService.getVendorOrders(req.params.vendorId);
+    res.json(orders);
   }),
 
   /**
@@ -85,14 +54,8 @@ const orderController = {
    */
   dispatchOrder: asyncHandler(async (req, res) => {
     const { orderId } = req.body;
-    db.run(
-      `UPDATE orders SET status = 'Dispatched' WHERE id = ?`,
-      [orderId],
-      function (err) {
-        if (err) return res.json({ error: err.message });
-        res.json({ message: "Order dispatched successfully" });
-      }
-    );
+    const result = await orderService.dispatchOrder(orderId);
+    res.json(result);
   }),
 
   /**
@@ -100,14 +63,8 @@ const orderController = {
    */
   receiveOrder: asyncHandler(async (req, res) => {
     const { orderId } = req.body;
-    db.run(
-      `UPDATE orders SET status = 'Received' WHERE id = ?`,
-      [orderId],
-      function (err) {
-        if (err) return res.json({ error: err.message });
-        res.json({ message: "Order received successfully" });
-      }
-    );
+    const result = await orderService.receiveOrder(orderId);
+    res.json(result);
   })
 };
 
