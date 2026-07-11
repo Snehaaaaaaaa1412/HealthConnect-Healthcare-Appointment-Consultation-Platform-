@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { apiClient } from "../../config/api";
 import emailjs from "@emailjs/browser";
 import {
   DoctorIcon,
@@ -48,7 +48,7 @@ function DoctorDashboard({ user }) {
 
   const fetchDoctorDetails = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/doctors/${user.id}`);
+      const res = await apiClient.get(`/doctors/${user.id}`);
       if (res.data && !res.data.error) {
         setDoctorInfo(res.data);
         setClinicForm({
@@ -100,7 +100,7 @@ function DoctorDashboard({ user }) {
 
   const fetchDoctorAppointments = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/appointments/doctor/${user.username}`);
+      const res = await apiClient.get(`/appointments/doctor/${user.username}`);
       const appts = res.data || [];
       setAppointments(appts);
       return appts;
@@ -112,7 +112,7 @@ function DoctorDashboard({ user }) {
 
   const fetchChatPartners = async (apptsOverride) => {
     try {
-      const res = await axios.get(`http://localhost:5000/chat/doctor-partners/${user.username}`);
+      const res = await apiClient.get(`/chat/doctor-partners/${user.username}`);
       const apiPartners = Array.isArray(res.data) ? res.data : [];
       if (apiPartners.length > 0) {
         setChatPartners(apiPartners);
@@ -172,7 +172,7 @@ function DoctorDashboard({ user }) {
 
     const updatedSlots = [...slots, newSlotObj];
     try {
-      await axios.post("http://localhost:5000/doctors/slots", {
+      await apiClient.post("/doctors/slots", {
         id: user.id,
         slots: updatedSlots
       });
@@ -195,7 +195,7 @@ function DoctorDashboard({ user }) {
     });
 
     try {
-      await axios.post("http://localhost:5000/doctors/slots", {
+      await apiClient.post("/doctors/slots", {
         id: user.id,
         slots: updatedSlots
       });
@@ -209,7 +209,7 @@ function DoctorDashboard({ user }) {
   const saveClinicDetails = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:5000/doctors/clinic-details", {
+      const res = await apiClient.post("/doctors/clinic-details", {
         id: user.id,
         ...clinicForm
       });
@@ -298,7 +298,7 @@ function DoctorDashboard({ user }) {
 
   const handleApproveAppointment = async (id) => {
     try {
-      const res = await axios.post("http://localhost:5000/appointments/approve", { appointmentId: id });
+      const res = await apiClient.post("/appointments/approve", { appointmentId: id });
       if (res.data.message === "Appointment approved successfully") {
         const appts = await fetchDoctorAppointments();
         await fetchChatPartners(appts);
@@ -313,7 +313,7 @@ function DoctorDashboard({ user }) {
 
   const handleCancelAppointment = async (id) => {
     try {
-      const res = await axios.post("http://localhost:5000/appointments/cancel", { appointmentId: id });
+      const res = await apiClient.post("/appointments/cancel", { appointmentId: id });
       if (res.data.message === "Appointment cancelled successfully") {
         fetchDoctorAppointments();
         if (prescriptionForm.appointmentId === id) {
@@ -341,7 +341,7 @@ function DoctorDashboard({ user }) {
     }
 
     try {
-      const res = await axios.post("http://localhost:5000/appointments/prescribe", {
+      const res = await apiClient.post("/appointments/prescribe", {
         appointmentId: prescriptionForm.appointmentId,
         drug: prescriptionForm.drug,
         dosage: prescriptionForm.dosage,
@@ -699,7 +699,7 @@ function DoctorDashboard({ user }) {
                           <td>
                             {app.medicalReportPath ? (
                               <a
-                                href={`http://localhost:5000${app.medicalReportPath}`}
+                                href={`${process.env.REACT_APP_API_BASE_URL || "http://localhost:5000"}${app.medicalReportPath}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="btn btn-secondary btn-xs"
@@ -796,7 +796,7 @@ function DoctorDashboard({ user }) {
                           <td>
                             {app.medicalReportPath ? (
                               <a
-                                href={`http://localhost:5000${app.medicalReportPath}`}
+                                href={`${process.env.REACT_APP_API_BASE_URL || "http://localhost:5000"}${app.medicalReportPath}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="btn btn-secondary btn-xs"

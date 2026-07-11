@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { apiClient } from "../../config/api";
 import { UserIcon, BackIcon } from "../Icons";
 import "./Register.css";
 
@@ -35,7 +35,7 @@ function UserRegister() {
     }
 
     try {
-      const res = await axios.post("http://localhost:5000/register", {
+      const res = await apiClient.post("/register", {
         fullName,
         username,
         password,

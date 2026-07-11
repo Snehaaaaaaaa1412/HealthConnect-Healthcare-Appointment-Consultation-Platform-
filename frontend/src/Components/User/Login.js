@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { apiClient } from "../../config/api";
 import { UserIcon, BackIcon } from "../Icons";
 import "./Login.css";
 
@@ -34,7 +34,7 @@ function UserLogin({ onLogin }) {
     setMessage("");
 
     try {
-      const res = await axios.post("http://localhost:5000/login", {
+      const res = await apiClient.post("/login", {
         username,
         password,
         role: "user",
@@ -62,7 +62,7 @@ function UserLogin({ onLogin }) {
     setIsOtpSending(true);
     setOtpError("");
     try {
-      const res = await axios.post("http://localhost:5000/auth/verify-otp", {
+      const res = await apiClient.post("/auth/verify-otp", {
         otpToken: generatedOtp,
         otp: inputOtp,
       });
@@ -84,7 +84,7 @@ function UserLogin({ onLogin }) {
     setIsOtpSending(true);
     setOtpError("");
     try {
-      const res = await axios.post("http://localhost:5000/auth/resend-otp", {
+      const res = await apiClient.post("/auth/resend-otp", {
         otpToken: generatedOtp,
       });
 

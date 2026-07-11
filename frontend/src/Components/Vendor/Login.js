@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { apiClient } from "../../config/api";
 import { VendorIcon, BackIcon } from "../Icons";
 import "./Login.css";
 
@@ -17,7 +17,7 @@ function VendorLogin({ onLogin }) {
     setMessage("");
 
     try {
-      const res = await axios.post("http://localhost:5000/login", {
+      const res = await apiClient.post("/login", {
         username,
         password,
         role: "vendor",

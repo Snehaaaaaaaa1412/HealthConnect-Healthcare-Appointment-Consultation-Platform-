@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { apiClient } from "../../config/api";
 import {
   VendorIcon,
   PlusIcon,
@@ -22,7 +22,7 @@ function VendorDashboard({ user }) {
 
   const fetchVendorDetails = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/vendors/${user.id}`);
+      const res = await apiClient.get(`/vendors/${user.id}`);
       if (res.data && !res.data.error) {
         setVendorInfo(res.data);
         if (res.data.inventory) {
@@ -40,7 +40,7 @@ function VendorDashboard({ user }) {
 
   const fetchVendorOrders = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/orders/vendor/${user.id}`);
+      const res = await apiClient.get(`/orders/vendor/${user.id}`);
       setOrders(res.data || []);
     } catch (err) {
       console.error("Failed to fetch vendor orders:", err);
@@ -55,7 +55,7 @@ function VendorDashboard({ user }) {
 
   const updateInventoryDatabase = async (updatedInv) => {
     try {
-      await axios.post("http://localhost:5000/vendors/inventory", {
+      await apiClient.post("/vendors/inventory", {
         id: user.id,
         inventory: updatedInv
       });
@@ -99,7 +99,7 @@ function VendorDashboard({ user }) {
 
   const handleDispatchOrder = async (orderId) => {
     try {
-      const res = await axios.post("http://localhost:5000/orders/dispatch", { orderId });
+      const res = await apiClient.post("/orders/dispatch", { orderId });
       if (res.data.message === "Order dispatched successfully") {
         fetchVendorOrders();
         fetchVendorDetails();

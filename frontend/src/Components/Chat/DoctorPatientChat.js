@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import { apiClient } from "../../config/api";
 import { MessageSquareIcon, BookOpenIcon, ClockIcon } from "../Icons";
 
 const formatChatTimeIST = (createdAt) => {
@@ -41,8 +41,8 @@ function DoctorPatientChat({
   const fetchMessages = async () => {
     if (!doctorUsername || !patientUsername) return;
     try {
-      const res = await axios.get(
-        `http://localhost:5000/chat/${doctorUsername}/${patientUsername}`
+      const res = await apiClient.get(
+        `/chat/${doctorUsername}/${patientUsername}`
       );
       setMessages(res.data || []);
     } catch (err) {
@@ -57,8 +57,8 @@ function DoctorPatientChat({
       return;
     }
     try {
-      const res = await axios.get(
-        `http://localhost:5000/chat/context/${doctorUsername}/${patientUsername}`
+      const res = await apiClient.get(
+        `/chat/context/${doctorUsername}/${patientUsername}`
       );
       setContext(res.data || null);
     } catch (err) {
@@ -84,7 +84,7 @@ function DoctorPatientChat({
     if (!inputText.trim() || sending) return;
     setSending(true);
     try {
-      await axios.post("http://localhost:5000/chat/send", {
+      await apiClient.post("/chat/send", {
         doctorUsername,
         patientUsername,
         senderRole: currentRole,
@@ -145,7 +145,7 @@ function DoctorPatientChat({
           {hasReport && (
             <div className="chat-context-row">
               <a
-                href={`http://localhost:5000${context.medicalReportPath}`}
+                href={`${process.env.REACT_APP_API_BASE_URL || "http://localhost:5000"}${context.medicalReportPath}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-secondary btn-xs"

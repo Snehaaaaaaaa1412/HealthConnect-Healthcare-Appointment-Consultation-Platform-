@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import { apiClient } from "../../config/api";
 import "./index.css";
 
 function Login({ onLogin }) {
@@ -9,7 +9,7 @@ function Login({ onLogin }) {
 
   // Register
   const register = async () => {
-    const res = await axios.post("http://localhost:5000/register", {
+    const res = await apiClient.post("/register", {
       username,
       password,
     });
@@ -18,7 +18,7 @@ function Login({ onLogin }) {
 
   // Login
   const login = async () => {
-    const res = await axios.post("http://localhost:5000/login", {
+    const res = await apiClient.post("/login", {
       username,
       password,
     });

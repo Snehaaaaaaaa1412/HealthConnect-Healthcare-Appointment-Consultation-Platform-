@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import axios from "axios";
+import { apiClient } from "./config/api";
+import { ROUTES } from "./constants/routes";
 import Index from "./Components/Index";
 import UserLogin from "./Components/User/Login";
 import UserRegister from "./Components/User/Register";
@@ -14,11 +15,11 @@ import Dashboard from "./Components/Dashboard/dashboard";
 // Initialize default axios headers if token exists in localStorage on startup
 const savedToken = localStorage.getItem("healthconnect_token");
 if (savedToken) {
-  axios.defaults.headers.common["Authorization"] = `Bearer ${savedToken}`;
+  apiClient.defaults.headers.common["Authorization"] = `Bearer ${savedToken}`;
 }
 
 // Global Axios response interceptor to unpack standard backend ApiResponse success envelopes
-axios.interceptors.response.use(
+apiClient.interceptors.response.use(
   (response) => {
     // If the response body matches the ApiResponse structure
     if (response.data && response.data.success === true) {
@@ -51,7 +52,7 @@ function App() {
     localStorage.setItem("healthconnect_role", role);
     if (token) {
       localStorage.setItem("healthconnect_token", token);
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     }
   };
 
@@ -61,59 +62,59 @@ function App() {
     localStorage.removeItem("healthconnect_user");
     localStorage.removeItem("healthconnect_role");
     localStorage.removeItem("healthconnect_token");
-    delete axios.defaults.headers.common["Authorization"];
+    delete apiClient.defaults.headers.common["Authorization"];
   };
 
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Index />} />
+        <Route path={ROUTES.HOME} element={<Index />} />
         
         <Route 
-          path="/user/login" 
-          element={user ? <Navigate to="/dashboard" replace /> : <UserLogin onLogin={handleLogin} />} 
+          path={ROUTES.USER_LOGIN} 
+          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <UserLogin onLogin={handleLogin} />} 
         />
         <Route 
-          path="/user/register" 
-          element={user ? <Navigate to="/dashboard" replace /> : <UserRegister />} 
-        />
-        
-        <Route 
-          path="/doctor/login" 
-          element={user ? <Navigate to="/dashboard" replace /> : <DoctorLogin onLogin={handleLogin} />} 
-        />
-        <Route 
-          path="/doctor/register" 
-          element={user ? <Navigate to="/dashboard" replace /> : <DoctorRegister />} 
+          path={ROUTES.USER_REGISTER} 
+          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <UserRegister />} 
         />
         
         <Route 
-          path="/vendor/login" 
-          element={user ? <Navigate to="/dashboard" replace /> : <VendorLogin onLogin={handleLogin} />} 
+          path={ROUTES.DOCTOR_LOGIN} 
+          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <DoctorLogin onLogin={handleLogin} />} 
         />
         <Route 
-          path="/vendor/register" 
-          element={user ? <Navigate to="/dashboard" replace /> : <VendorRegister />} 
-        />
-        
-        <Route 
-          path="/admin/login" 
-          element={user ? <Navigate to="/dashboard" replace /> : <AdminLogin onLogin={handleLogin} />} 
+          path={ROUTES.DOCTOR_REGISTER} 
+          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <DoctorRegister />} 
         />
         
         <Route 
-          path="/dashboard" 
+          path={ROUTES.VENDOR_LOGIN} 
+          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <VendorLogin onLogin={handleLogin} />} 
+        />
+        <Route 
+          path={ROUTES.VENDOR_REGISTER} 
+          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <VendorRegister />} 
+        />
+        
+        <Route 
+          path={ROUTES.ADMIN_LOGIN} 
+          element={user ? <Navigate to={ROUTES.DASHBOARD} replace /> : <AdminLogin onLogin={handleLogin} />} 
+        />
+        
+        <Route 
+          path={ROUTES.DASHBOARD} 
           element={
             user ? (
               <Dashboard user={user} role={userRole} onLogout={handleLogout} />
             ) : (
-              <Navigate to="/" replace />
+              <Navigate to={ROUTES.HOME} replace />
             )
           } 
         />
 
         {/* Fallback route */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
       </Routes>
     </Router>
   );

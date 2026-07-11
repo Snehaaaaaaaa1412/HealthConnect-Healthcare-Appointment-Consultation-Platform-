@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import axios from "axios";
+import { apiClient, ocrClient } from "../../config/api";
 import {
   DoctorIcon,
   PillsIcon,
@@ -60,7 +60,7 @@ function UserDashboard({ user }) {
 
   const fetchChatPartners = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/chat/patient-partners/${user.username}`);
+      const res = await apiClient.get(`/chat/patient-partners/${user.username}`);
       setChatPartners(res.data || []);
     } catch (err) {
       console.error("Failed to fetch chat partners:", err);
@@ -78,9 +78,9 @@ function UserDashboard({ user }) {
 
   const fetchApprovedEntities = async () => {
     try {
-      const docRes = await axios.get("http://localhost:5000/public/doctors");
+      const docRes = await apiClient.get("/public/doctors");
       setDoctors(docRes.data || []);
-      const storeRes = await axios.get("http://localhost:5000/public/vendors");
+      const storeRes = await apiClient.get("/public/vendors");
       setStores(storeRes.data || []);
     } catch (err) {
       console.error("Failed to fetch public health directory.");
@@ -89,7 +89,7 @@ function UserDashboard({ user }) {
 
   const fetchUserAppointments = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/appointments/patient/${user.username}`);
+      const res = await apiClient.get(`/appointments/patient/${user.username}`);
       setAppointments(res.data || []);
     } catch (err) {
       console.error("Failed to fetch user appointments:", err);
@@ -98,7 +98,7 @@ function UserDashboard({ user }) {
 
   const fetchUserOrders = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/orders/patient/${user.username}`);
+      const res = await apiClient.get(`/orders/patient/${user.username}`);
       setUserOrders(res.data || []);
     } catch (err) {
       console.error("Failed to fetch user orders:", err);
@@ -109,7 +109,7 @@ function UserDashboard({ user }) {
   const triggerBotResponse = async (query) => {
     setIsBotTyping(true);
     try {
-      const res = await axios.post("http://localhost:5001/triage", { query });
+      const res = await ocrClient.post("/triage", { query });
       const { explanation, department } = res.data;
       
       setSuggestedDept(department);
@@ -183,7 +183,7 @@ function UserDashboard({ user }) {
     formData.append("file", file);
 
     try {
-      const res = await axios.post("http://localhost:5001/extract-text", formData, {
+      const res = await ocrClient.post("/extract-text", formData, {
         headers: {
           "Content-Type": "multipart/form-data"
         }
@@ -246,7 +246,7 @@ function UserDashboard({ user }) {
         formData.append("medicalReport", bookingReportFile);
       }
 
-      const res = await axios.post("http://localhost:5000/appointments/book", formData, {
+      const res = await apiClient.post("/appointments/book", formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
 
@@ -302,7 +302,7 @@ function UserDashboard({ user }) {
     
     setTimeout(async () => {
       try {
-        const res = await axios.post("http://localhost:5000/appointments/pay", {
+        const res = await apiClient.post("/appointments/pay", {
           appointmentId: selectedPayApp.id
         });
         
@@ -374,7 +374,7 @@ function UserDashboard({ user }) {
 
         for (const storeId of Object.keys(groups)) {
           const group = groups[storeId];
-          await axios.post("http://localhost:5000/orders/create", {
+          await apiClient.post("/orders/create", {
             patientUsername: user.username,
             patientFullName: user.fullName || "John Doe",
             vendorId: parseInt(storeId),
@@ -405,7 +405,7 @@ function UserDashboard({ user }) {
 
   const handleReceiveOrder = async (orderId) => {
     try {
-      const res = await axios.post("http://localhost:5000/orders/receive", { orderId });
+      const res = await apiClient.post("/orders/receive", { orderId });
       if (res.data.message === "Order received successfully") {
         fetchUserOrders();
       } else {
@@ -849,7 +849,7 @@ function UserDashboard({ user }) {
                           <td>
                             {app.medicalReportPath ? (
                               <a
-                                href={`http://localhost:5000${app.medicalReportPath}`}
+                                href={`${process.env.REACT_APP_API_BASE_URL || "http://localhost:5000"}${app.medicalReportPath}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="btn btn-secondary btn-xs"

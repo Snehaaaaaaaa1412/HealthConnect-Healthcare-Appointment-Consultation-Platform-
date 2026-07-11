@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { apiClient } from "../../config/api";
 import {
   UserIcon,
   DoctorIcon,
@@ -24,16 +24,16 @@ function AdminDashboard() {
 
   const fetchAdminDossier = async () => {
     try {
-      const statsRes = await axios.get("http://localhost:5000/admin/stats");
+      const statsRes = await apiClient.get("/admin/stats");
       setStats(statsRes.data);
 
-      const docRes = await axios.get("http://localhost:5000/admin/doctors");
+      const docRes = await apiClient.get("/admin/doctors");
       setDoctors(docRes.data || []);
 
-      const venRes = await axios.get("http://localhost:5000/admin/vendors");
+      const venRes = await apiClient.get("/admin/vendors");
       setVendors(venRes.data || []);
 
-      const analyticsRes = await axios.get("http://localhost:5000/admin/analytics");
+      const analyticsRes = await apiClient.get("/admin/analytics");
       setAnalytics(analyticsRes.data || null);
     } catch (err) {
       console.error("Failed to load statutory administration registries.");
@@ -42,12 +42,12 @@ function AdminDashboard() {
 
   const approveDoctor = async (id) => {
     try {
-      await axios.post("http://localhost:5000/admin/approve-doctor", { id });
+      await apiClient.post("/admin/approve-doctor", { id });
       setDoctors((prev) =>
-        prev.map((d) => (d.id === id ? { ...d, status: "approved" } : d))
+          prev.map((d) => (d.id === id ? { ...d, status: "approved" } : d))
       );
       // Refresh stats
-      const statsRes = await axios.get("http://localhost:5000/admin/stats");
+      const statsRes = await apiClient.get("/admin/stats");
       setStats(statsRes.data);
     } catch (err) {
       alert("Verification signoff failed.");
@@ -56,12 +56,12 @@ function AdminDashboard() {
 
   const approveVendor = async (id) => {
     try {
-      await axios.post("http://localhost:5000/admin/approve-vendor", { id });
+      await apiClient.post("/admin/approve-vendor", { id });
       setVendors((prev) =>
-        prev.map((v) => (v.id === id ? { ...v, status: "approved" } : v))
+          prev.map((v) => (v.id === id ? { ...v, status: "approved" } : v))
       );
       // Refresh stats
-      const statsRes = await axios.get("http://localhost:5000/admin/stats");
+      const statsRes = await apiClient.get("/admin/stats");
       setStats(statsRes.data);
     } catch (err) {
       alert("Verification signoff failed.");
@@ -71,10 +71,10 @@ function AdminDashboard() {
   const deleteDoctor = async (id) => {
     if (!window.confirm("Confirm deletion of practitioner record?")) return;
     try {
-      await axios.post("http://localhost:5000/admin/delete-doctor", { id });
+      await apiClient.post("/admin/delete-doctor", { id });
       setDoctors((prev) => prev.filter((d) => d.id !== id));
       // Refresh stats
-      const statsRes = await axios.get("http://localhost:5000/admin/stats");
+      const statsRes = await apiClient.get("/admin/stats");
       setStats(statsRes.data);
     } catch (err) {
       alert("Removal request failed.");
@@ -84,10 +84,10 @@ function AdminDashboard() {
   const deleteVendor = async (id) => {
     if (!window.confirm("Confirm deletion of store vendor record?")) return;
     try {
-      await axios.post("http://localhost:5000/admin/delete-vendor", { id });
+      await apiClient.post("/admin/delete-vendor", { id });
       setVendors((prev) => prev.filter((v) => v.id !== id));
       // Refresh stats
-      const statsRes = await axios.get("http://localhost:5000/admin/stats");
+      const statsRes = await apiClient.get("/admin/stats");
       setStats(statsRes.data);
     } catch (err) {
       alert("Removal request failed.");
