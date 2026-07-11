@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { adminService } from "../../services/adminService";
 import {
   UserIcon,
@@ -11,34 +11,19 @@ import {
 import "../Dashboard/dashboard.css";
 import { BarChart, DonutChart } from "../Analytics/AnalyticsCharts";
 
+import { useAdminDossier } from "../../hooks/useAdmin";
+
 function AdminDashboard() {
-  const [stats, setStats] = useState({ usersCount: 0, doctorsCount: 0, vendorsCount: 0 });
-  const [doctors, setDoctors] = useState([]);
-  const [vendors, setVendors] = useState([]);
   const [activeTab, setActiveTab] = useState("vetting");
-  const [analytics, setAnalytics] = useState(null);
-  
-  useEffect(() => {
-    fetchAdminDossier();
-  }, []);
-
-  const fetchAdminDossier = async () => {
-    try {
-      const statsData = await adminService.getStats();
-      setStats(statsData);
-
-      const doctorsData = await adminService.getAllDoctors();
-      setDoctors(doctorsData || []);
-
-      const vendorsData = await adminService.getAllVendors();
-      setVendors(vendorsData || []);
-
-      const analyticsData = await adminService.getAnalytics();
-      setAnalytics(analyticsData || null);
-    } catch (err) {
-      console.error("Failed to load statutory administration registries.");
-    }
-  };
+  const {
+    stats,
+    doctors,
+    vendors,
+    analytics,
+    setDoctors,
+    setVendors,
+    setStats
+  } = useAdminDossier();
 
   const approveDoctor = async (id) => {
     try {

@@ -1,11 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { ocrClient } from "../../config/api";
-import { doctorService } from "../../services/doctorService";
-import { vendorService } from "../../services/vendorService";
 import { appointmentService } from "../../services/appointmentService";
 import { orderService } from "../../services/orderService";
-import { chatService } from "../../services/chatService";
 import {
   DoctorIcon,
   PillsIcon,
@@ -25,6 +22,11 @@ import "../Dashboard/dashboard.css";
 import { BarChart, LineChart, DonutChart } from "../Analytics/AnalyticsCharts";
 import DoctorPatientChat from "../Chat/DoctorPatientChat";
 import { useAuth } from "../../context/AuthContext";
+import { usePublicDoctors } from "../../hooks/useDoctors";
+import { usePublicVendors } from "../../hooks/useVendor";
+import { usePatientAppointments } from "../../hooks/useAppointments";
+import { usePatientOrders } from "../../hooks/useOrders";
+import { useChatPartners } from "../../hooks/useChat";
 
 function UserDashboard({ user: propUser }) {
   const { user: contextUser } = useAuth();
@@ -39,20 +41,25 @@ function UserDashboard({ user: propUser }) {
   ]);
   const [isBotTyping, setIsBotTyping] = useState(false);
   const [suggestedDept, setSuggestedDept] = useState("");
-  const [doctors, setDoctors] = useState([]);
+  
+  // Custom hooks replacing direct API fetches and states
+  const { doctors, setDoctors } = usePublicDoctors();
+  const { vendors: stores } = usePublicVendors();
+  const { appointments, refetch: fetchUserAppointments } = usePatientAppointments(user.username);
+  const { orders: userOrders, refetch: fetchUserOrders } = usePatientOrders(user.username);
+  const { partners: chatPartners, refetch: fetchChatPartners } = useChatPartners("user", user.username);
+
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [bookingSlot, setBookingSlot] = useState("");
   const [bookingSymptoms, setBookingSymptoms] = useState("");
   const [bookingReportFile, setBookingReportFile] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [appointments, setAppointments] = useState([]);
   const [selectedPayApp, setSelectedPayApp] = useState(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentSuccessToast, setPaymentSuccessToast] = useState("");
   
   // Shopping Cart & Pharmacy Fulfillment
-  const [stores, setStores] = useState([]);
   const [searchDrug, setSearchDrug] = useState("");
   const [cart, setCart] = useState([]);
 
@@ -60,58 +67,7 @@ function UserDashboard({ user: propUser }) {
   const [showCartCheckoutModal, setShowCartCheckoutModal] = useState(false);
   const [shippingAddress, setShippingAddress] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [userOrders, setUserOrders] = useState([]);
-
-  // Doctor chat state
-  const [chatPartners, setChatPartners] = useState([]);
   const [selectedChatDoctor, setSelectedChatDoctor] = useState(null);
-
-  const fetchChatPartners = async () => {
-    try {
-      const res = await chatService.getPatientPartners(user.username);
-      setChatPartners(res || []);
-    } catch (err) {
-      console.error("Failed to fetch chat partners:", err);
-    }
-  };
-
-  // Fetch approved practitioners and vendors
-  useEffect(() => {
-    fetchApprovedEntities();
-    fetchUserAppointments();
-    fetchUserOrders();
-    fetchChatPartners();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchApprovedEntities = async () => {
-    try {
-      const docRes = await doctorService.getPublicDoctors();
-      setDoctors(docRes || []);
-      const storeRes = await vendorService.getPublicVendors();
-      setStores(storeRes || []);
-    } catch (err) {
-      console.error("Failed to fetch public health directory.");
-    }
-  };
-
-  const fetchUserAppointments = async () => {
-    try {
-      const res = await appointmentService.getPatientAppointments(user.username);
-      setAppointments(res || []);
-    } catch (err) {
-      console.error("Failed to fetch user appointments:", err);
-    }
-  };
-
-  const fetchUserOrders = async () => {
-    try {
-      const res = await orderService.getPatientOrders(user.username);
-      setUserOrders(res || []);
-    } catch (err) {
-      console.error("Failed to fetch user orders:", err);
-    }
-  };
 
   // AI Symptom parsing mock logic
   const triggerBotResponse = async (query) => {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { doctorService } from "../../services/doctorService";
 import { appointmentService } from "../../services/appointmentService";
-import { chatService } from "../../services/chatService";
 import emailjs from "@emailjs/browser";
 import {
   DoctorIcon,
@@ -20,6 +19,8 @@ import "../Dashboard/dashboard.css";
 import { BarChart, LineChart, DonutChart } from "../Analytics/AnalyticsCharts";
 import DoctorPatientChat from "../Chat/DoctorPatientChat";
 import { useAuth } from "../../context/AuthContext";
+import { useDoctorAppointments } from "../../hooks/useAppointments";
+import { useChatPartners } from "../../hooks/useChat";
 
 function DoctorDashboard({ user: propUser }) {
   const { user: contextUser } = useAuth();
@@ -29,7 +30,6 @@ function DoctorDashboard({ user: propUser }) {
   const [slots, setSlots] = useState([]);
   const [slotDatetime, setSlotDatetime] = useState("");
   const [slotFee, setSlotFee] = useState("");
-  const [appointments, setAppointments] = useState([]);
   const [prescriptionForm, setPrescriptionForm] = useState({ 
     appointmentId: "", 
     patient: "", 
@@ -47,7 +47,9 @@ function DoctorDashboard({ user: propUser }) {
   const [clinicSaveSuccess, setClinicSaveSuccess] = useState(false);
   const [isEditingClinic, setIsEditingClinic] = useState(false);
 
-  const [chatPartners, setChatPartners] = useState([]);
+  // Custom hooks replacing local state and API fetches
+  const { appointments, refetch: fetchDoctorAppointments } = useDoctorAppointments(user.username);
+  const { partners: apiPartners, refetch: refetchChatPartners } = useChatPartners("doctor", user.username);
   const [selectedChatPatient, setSelectedChatPatient] = useState(null);
   const [emailToast, setEmailToast] = useState("");
 
@@ -103,47 +105,12 @@ function DoctorDashboard({ user: propUser }) {
     );
   };
 
-  const fetchDoctorAppointments = async () => {
-    try {
-      const res = await appointmentService.getDoctorAppointments(user.username);
-      const appts = res || [];
-      setAppointments(appts);
-      return appts;
-    } catch (err) {
-      console.error("Failed to fetch doctor appointments:", err);
-      return [];
-    }
-  };
-
-  const fetchChatPartners = async (apptsOverride) => {
-    try {
-      const res = await chatService.getDoctorPartners(user.username);
-      const apiPartners = Array.isArray(res) ? res : [];
-      if (apiPartners.length > 0) {
-        setChatPartners(apiPartners);
-        return;
-      }
-      const appts = apptsOverride || appointments;
-      if (appts.length > 0) {
-        setChatPartners(buildChatPartnersFromAppointments(appts, apiPartners));
-        return;
-      }
-      const freshAppts = await fetchDoctorAppointments();
-      setChatPartners(buildChatPartnersFromAppointments(freshAppts, apiPartners));
-    } catch (err) {
-      console.error("Failed to fetch chat partners:", err);
-      const appts = apptsOverride || appointments;
-      setChatPartners(buildChatPartnersFromAppointments(appts));
-    }
-  };
+  const chatPartners = apiPartners.length > 0
+    ? apiPartners
+    : buildChatPartnersFromAppointments(appointments, apiPartners);
 
   useEffect(() => {
-    const load = async () => {
-      await fetchDoctorDetails();
-      const appts = await fetchDoctorAppointments();
-      await fetchChatPartners(appts);
-    };
-    load();
+    fetchDoctorDetails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -299,8 +266,8 @@ function DoctorDashboard({ user: propUser }) {
     try {
       const res = await appointmentService.approveAppointment(id);
       if (res.message === "Appointment approved successfully") {
-        const appts = await fetchDoctorAppointments();
-        await fetchChatPartners(appts);
+        await fetchDoctorAppointments();
+        await refetchChatPartners();
         await sendConfirmationEmail(res);
       } else {
         alert(res.error || "Failed to approve appointment.");
@@ -439,8 +406,8 @@ function DoctorDashboard({ user: propUser }) {
           className={`sub-nav-item ${activeTab === "chat" ? "active" : ""}`}
           onClick={async () => {
             setActiveTab("chat");
-            const appts = await fetchDoctorAppointments();
-            await fetchChatPartners(appts);
+            await fetchDoctorAppointments();
+            await refetchChatPartners();
           }}
         >
           Patient Chat

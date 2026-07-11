@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { vendorService } from "../../services/vendorService";
+import React, { useState } from "react";
 import { orderService } from "../../services/orderService";
 import {
   VendorIcon,
@@ -13,59 +12,18 @@ import {
 import "../Dashboard/dashboard.css";
 import { BarChart, LineChart, DonutChart } from "../Analytics/AnalyticsCharts";
 import { useAuth } from "../../context/AuthContext";
+import { useVendorProfile } from "../../hooks/useVendor";
+import { useVendorOrders } from "../../hooks/useOrders";
 
 function VendorDashboard({ user: propUser }) {
   const { user: contextUser } = useAuth();
   const user = propUser || contextUser;
   const storeName = user.storeName || "Health Pharmacy";
   const [activeTab, setActiveTab] = useState("inventory");
-  const [vendorInfo, setVendorInfo] = useState(user);
-  const [inventory, setInventory] = useState([]);
   const [newItem, setNewItem] = useState({ name: "", price: "", stock: "", domain: "General Practitioner" });
-  const [orders, setOrders] = useState([]);
 
-  const fetchVendorDetails = async () => {
-    try {
-      const res = await vendorService.getVendorById(user.id);
-      if (res && !res.error) {
-        setVendorInfo(res);
-        if (res.inventory) {
-          try {
-            setInventory(JSON.parse(res.inventory));
-          } catch (e) {
-            setInventory([]);
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch vendor details:", err);
-    }
-  };
-
-  const fetchVendorOrders = async () => {
-    try {
-      const res = await orderService.getVendorOrders(user.id);
-      setOrders(res || []);
-    } catch (err) {
-      console.error("Failed to fetch vendor orders:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchVendorDetails();
-    fetchVendorOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const updateInventoryDatabase = async (updatedInv) => {
-    try {
-      await vendorService.updateInventory(user.id, updatedInv);
-      setInventory(updatedInv);
-      fetchVendorDetails();
-    } catch (err) {
-      alert("Failed to update inventory database.");
-    }
-  };
+  const { vendorInfo, inventory, updateInventory, refetch: fetchVendorDetails } = useVendorProfile(user.id);
+  const { orders, refetch: fetchVendorOrders } = useVendorOrders(user.id);
 
   const handleAddSku = (e) => {
     e.preventDefault();
@@ -79,7 +37,7 @@ function VendorDashboard({ user: propUser }) {
     };
 
     const updated = [...inventory, itemObj];
-    updateInventoryDatabase(updated);
+    updateInventory(updated);
     setNewItem({ name: "", price: "", stock: "", domain: "General Practitioner" });
   };
 
@@ -90,12 +48,12 @@ function VendorDashboard({ user: propUser }) {
       }
       return item;
     });
-    updateInventoryDatabase(updated);
+    updateInventory(updated);
   };
 
   const handleRemoveSku = (idx) => {
     const updated = inventory.filter((_, i) => i !== idx);
-    updateInventoryDatabase(updated);
+    updateInventory(updated);
   };
 
   const handleDispatchOrder = async (orderId) => {
