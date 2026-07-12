@@ -20,8 +20,12 @@ apiClient.interceptors.response.use(
     if (response.data && response.data.success === true) {
       if (response.data.hasOwnProperty("data")) {
         const payload = response.data.data;
-        // If payload is a valid object, merge the envelope fields for compatibility
-        if (payload && typeof payload === "object") {
+        if (payload === null || payload === undefined) {
+          // Return the full envelope for null payloads (like registration) so res.message works
+          return response;
+        }
+        // If payload is a valid plain object (not an array), merge the envelope fields for compatibility
+        if (typeof payload === "object" && !Array.isArray(payload)) {
           const merged = {
             ...payload,
             success: response.data.success,
@@ -35,6 +39,9 @@ apiClient.interceptors.response.use(
             }
           };
           return { ...response, data: merged };
+        } else {
+          // If payload is an array or primitive, return it directly unpacked
+          return { ...response, data: payload };
         }
       }
     }
