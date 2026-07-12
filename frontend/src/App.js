@@ -18,9 +18,24 @@ apiClient.interceptors.response.use(
   (response) => {
     // If the response body matches the ApiResponse structure
     if (response.data && response.data.success === true) {
-      // If it contains a 'data' payload, return it directly on the response object
       if (response.data.hasOwnProperty("data")) {
-        return { ...response, data: response.data.data };
+        const payload = response.data.data;
+        // If payload is a valid object, merge the envelope fields for compatibility
+        if (payload && typeof payload === "object") {
+          const merged = {
+            ...payload,
+            success: response.data.success,
+            message: response.data.message,
+            statusCode: response.data.statusCode,
+            data: {
+              ...payload,
+              success: response.data.success,
+              message: response.data.message,
+              statusCode: response.data.statusCode
+            }
+          };
+          return { ...response, data: merged };
+        }
       }
     }
     return response;
