@@ -211,6 +211,14 @@ const appointmentService = {
     }
 
     await appointmentRepository.updatePaymentStatus(appointmentId, "Successful");
+
+    // If prescription was already written, release the escrow payout immediately to the doctor
+    if (appt.prescriptionDrug && appt.escrowStatus === "held") {
+      const payoutTransferred = appt.fee || 0.0;
+      await doctorRepository.incrementBalance(appt.doctorUsername, payoutTransferred);
+      await appointmentRepository.updateEscrowStatus(appointmentId, "released");
+    }
+
     return { message: "Payment processed successfully" };
   },
 
