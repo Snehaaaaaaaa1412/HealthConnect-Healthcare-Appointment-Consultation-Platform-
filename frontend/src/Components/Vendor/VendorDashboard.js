@@ -14,10 +14,12 @@ import { BarChart, LineChart, DonutChart } from "../Analytics/AnalyticsCharts";
 import { useAuth } from "../../context/AuthContext";
 import { useVendorProfile } from "../../hooks/useVendor";
 import { useVendorOrders } from "../../hooks/useOrders";
+import { useToast } from "../../context/ToastContext";
 
 function VendorDashboard({ user: propUser }) {
   const { user: contextUser } = useAuth();
   const user = propUser || contextUser;
+  const { showSuccess, showError } = useToast();
   const storeName = user.storeName || "Health Pharmacy";
   const [activeTab, setActiveTab] = useState("inventory");
   const [newItem, setNewItem] = useState({ name: "", price: "", stock: "", domain: "General Practitioner" });
@@ -62,11 +64,12 @@ function VendorDashboard({ user: propUser }) {
       if (res.message === "Order dispatched successfully") {
         fetchVendorOrders();
         fetchVendorDetails();
+        showSuccess("Order dispatched successfully.");
       } else {
-        alert(res.error || "Failed to dispatch order.");
+        showError(res.error || "Failed to dispatch order.");
       }
     } catch (err) {
-      alert("Error dispatching order.");
+      showError("Error dispatching order.");
     }
   };
 

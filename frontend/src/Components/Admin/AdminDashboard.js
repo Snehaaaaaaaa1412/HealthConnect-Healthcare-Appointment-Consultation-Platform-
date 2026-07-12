@@ -12,9 +12,12 @@ import "../Dashboard/dashboard.css";
 import { BarChart, DonutChart } from "../Analytics/AnalyticsCharts";
 
 import { useAdminDossier } from "../../hooks/useAdmin";
+import { useToast } from "../../context/ToastContext";
 
 function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("vetting");
+  const { showSuccess, showError } = useToast();
+  const [confirmDelete, setConfirmDelete] = useState({ show: false, type: "", id: null, name: "" });
   const {
     stats,
     doctors,
@@ -34,8 +37,9 @@ function AdminDashboard() {
       // Refresh stats
       const statsData = await adminService.getStats();
       setStats(statsData);
+      showSuccess("Practitioner verified successfully.");
     } catch (err) {
-      alert("Verification signoff failed.");
+      showError("Verification signoff failed.");
     }
   };
 
@@ -48,34 +52,35 @@ function AdminDashboard() {
       // Refresh stats
       const statsData = await adminService.getStats();
       setStats(statsData);
+      showSuccess("Store vendor verified successfully.");
     } catch (err) {
-      alert("Verification signoff failed.");
+      showError("Verification signoff failed.");
     }
   };
 
-  const deleteDoctor = async (id) => {
-    if (!window.confirm("Confirm deletion of practitioner record?")) return;
+  const executeDeleteDoctor = async (id) => {
     try {
       await adminService.deleteDoctor(id);
       setDoctors((prev) => prev.filter((d) => d.id !== id));
       // Refresh stats
       const statsData = await adminService.getStats();
       setStats(statsData);
+      showSuccess("Practitioner record removed.");
     } catch (err) {
-      alert("Removal request failed.");
+      showError("Removal request failed.");
     }
   };
 
-  const deleteVendor = async (id) => {
-    if (!window.confirm("Confirm deletion of store vendor record?")) return;
+  const executeDeleteVendor = async (id) => {
     try {
       await adminService.deleteVendor(id);
       setVendors((prev) => prev.filter((v) => v.id !== id));
       // Refresh stats
       const statsData = await adminService.getStats();
       setStats(statsData);
+      showSuccess("Store vendor record removed.");
     } catch (err) {
-      alert("Removal request failed.");
+      showError("Removal request failed.");
     }
   };
 
@@ -192,7 +197,7 @@ function AdminDashboard() {
                             )}
                             <button
                               className="btn btn-secondary btn-xs trash-btn"
-                              onClick={() => deleteDoctor(doc.id)}
+                              onClick={() => setConfirmDelete({ show: true, type: "doctor", id: doc.id, name: doc.fullName })}
                             >
                               <TrashIcon size={12} />
                             </button>
@@ -265,7 +270,7 @@ function AdminDashboard() {
                             )}
                             <button
                               className="btn btn-secondary btn-xs trash-btn"
-                              onClick={() => deleteVendor(v.id)}
+                              onClick={() => setConfirmDelete({ show: true, type: "vendor", id: v.id, name: v.storeName || "Health Pharmacy" })}
                             >
                               <TrashIcon size={12} />
                             </button>
@@ -360,6 +365,45 @@ function AdminDashboard() {
                 />
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {confirmDelete.show && (
+        <div className="modal-overlay" onClick={() => setConfirmDelete({ show: false, type: "", id: null, name: "" })}>
+          <div className="modal-card card" style={{ maxWidth: "400px" }} onClick={(e) => e.stopPropagation()}>
+            <button 
+              className="close-modal-x-btn" 
+              onClick={() => setConfirmDelete({ show: false, type: "", id: null, name: "" })}
+            >
+              &times;
+            </button>
+            <h3 style={{ marginBottom: "1rem" }}>Confirm Account Deletion</h3>
+            <p style={{ fontSize: "0.95rem", color: "var(--text-secondary)", marginBottom: "1.5rem" }}>
+              Are you sure you want to permanently delete the {confirmDelete.type} record for <strong>{confirmDelete.name}</strong>? This action is irreversible.
+            </p>
+            <div className="modal-actions" style={{ display: "flex", justifyContent: "flex-end", gap: "1rem" }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setConfirmDelete({ show: false, type: "", id: null, name: "" })}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-crimson" 
+                onClick={async () => {
+                  const { type, id } = confirmDelete;
+                  setConfirmDelete({ show: false, type: "", id: null, name: "" });
+                  if (type === "doctor") {
+                    await executeDeleteDoctor(id);
+                  } else {
+                    await executeDeleteVendor(id);
+                  }
+                }}
+              >
+                Confirm Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

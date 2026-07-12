@@ -27,10 +27,12 @@ import { usePublicVendors } from "../../hooks/useVendor";
 import { usePatientAppointments } from "../../hooks/useAppointments";
 import { usePatientOrders } from "../../hooks/useOrders";
 import { useChatPartners } from "../../hooks/useChat";
+import { useToast } from "../../context/ToastContext";
 
 function UserDashboard({ user: propUser }) {
   const { user: contextUser } = useAuth();
   const user = propUser || contextUser;
+  const { showSuccess, showError, showWarning } = useToast();
   const [activeTab, setActiveTab] = useState("home");
   const [symptomInput, setSymptomInput] = useState("");
   const [chatLog, setChatLog] = useState([
@@ -57,7 +59,6 @@ function UserDashboard({ user: propUser }) {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [selectedPayApp, setSelectedPayApp] = useState(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [paymentSuccessToast, setPaymentSuccessToast] = useState("");
   
   // Shopping Cart & Pharmacy Fulfillment
   const [searchDrug, setSearchDrug] = useState("");
@@ -188,7 +189,7 @@ function UserDashboard({ user: propUser }) {
     const hasDetails = Boolean(bookingSymptoms.trim() || bookingReportFile);
     if (!hasDetails || bookingLoading) {
       if (!hasDetails) {
-        alert("Please describe your symptoms, upload a medical report, or provide both.");
+        showWarning("Please describe your symptoms, upload a medical report, or provide both.");
       }
       return;
     }
@@ -214,6 +215,7 @@ function UserDashboard({ user: propUser }) {
 
       if (res.message === "Appointment booked successfully") {
         setPaymentSuccess(true);
+        showSuccess("Appointment booked successfully!");
         
         // Remove slot from doctor view state locally
         setDoctors((prev) =>
@@ -245,10 +247,10 @@ function UserDashboard({ user: propUser }) {
           setPaymentSuccess(false);
         }, 2000);
       } else {
-        alert(res.data.error || res.data.message || "Booking failed.");
+        showError(res.data.error || res.data.message || "Booking failed.");
       }
     } catch (err) {
-      alert("Booking failed. Please try again.");
+      showError("Booking failed. Please try again.");
     } finally {
       setBookingLoading(false);
     }
@@ -269,19 +271,15 @@ function UserDashboard({ user: propUser }) {
         if (res.message === "Payment processed successfully") {
           setPaymentLoading(false);
           setSelectedPayApp(null);
-          setPaymentSuccessToast(`Payment Successful for Dr. ${selectedPayApp.doctorFullName} consultation!`);
+          showSuccess(`Payment Successful for Dr. ${selectedPayApp.doctorFullName} consultation!`);
           fetchUserAppointments();
-          
-          setTimeout(() => {
-            setPaymentSuccessToast("");
-          }, 5000);
         } else {
           setPaymentLoading(false);
-          alert(res.error || "Payment transaction failed.");
+          showError(res.error || "Payment transaction failed.");
         }
       } catch (err) {
         setPaymentLoading(false);
-        alert("Payment gateway communication error.");
+        showError("Payment gateway communication error.");
       }
     }, 5000);
   };
@@ -306,7 +304,7 @@ function UserDashboard({ user: propUser }) {
   const handleConfirmCartPayment = async (e) => {
     e.preventDefault();
     if (!shippingAddress.trim()) {
-      alert("Please enter a shipping address.");
+      showWarning("Please enter a shipping address.");
       return;
     }
     setCheckoutLoading(true);
@@ -349,14 +347,10 @@ function UserDashboard({ user: propUser }) {
         setCart([]);
         setShowCartCheckoutModal(false);
         setShippingAddress("");
-        setPaymentSuccessToast("Payment Successful! Pharmacy order created.");
+        showSuccess("Payment Successful! Pharmacy order created.");
         fetchUserOrders();
-
-        setTimeout(() => {
-          setPaymentSuccessToast("");
-        }, 5000);
       } catch (err) {
-        alert("Checkout processing failed. Please try again.");
+        showError("Checkout processing failed. Please try again.");
       } finally {
         setCheckoutLoading(false);
       }
@@ -368,11 +362,12 @@ function UserDashboard({ user: propUser }) {
       const res = await orderService.receiveOrder(orderId);
       if (res.message === "Order received successfully") {
         fetchUserOrders();
+        showSuccess("Order marked as received successfully.");
       } else {
-        alert(res.error || "Failed to mark order as received.");
+        showError(res.error || "Failed to mark order as received.");
       }
     } catch (err) {
-      alert("Error marking order as received.");
+      showError("Error marking order as received.");
     }
   };
 
@@ -411,16 +406,6 @@ function UserDashboard({ user: propUser }) {
   return (
     <div className="user-dashboard">
       
-      {/* Toast Success Notification */}
-      {paymentSuccessToast && (
-        <div className="payment-toast-notification">
-          <div className="toast-icon-check">
-            <ShieldCheckIcon size={18} />
-          </div>
-          <span>{paymentSuccessToast}</span>
-        </div>
-      )}
-
       {/* Sub-navbar */}
       <div className="sub-navbar">
         <div 

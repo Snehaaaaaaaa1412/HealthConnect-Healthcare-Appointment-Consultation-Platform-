@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { chatService } from "../../services/chatService";
 import { MessageSquareIcon, BookOpenIcon, ClockIcon } from "../Icons";
+import { useToast } from "../../context/ToastContext";
 
 const formatChatTimeIST = (createdAt) => {
   if (!createdAt) return "";
@@ -29,6 +30,7 @@ function DoctorPatientChat({
   partnerName,
   appointmentContext = null
 }) {
+  const { showError } = useToast();
   const [messages, setMessages] = useState([]);
   const [context, setContext] = useState(appointmentContext);
   const [inputText, setInputText] = useState("");
@@ -87,7 +89,7 @@ function DoctorPatientChat({
       setInputText("");
       fetchMessages();
     } catch (err) {
-      alert("Failed to send message.");
+      showError("Failed to send message.");
     } finally {
       setSending(false);
     }

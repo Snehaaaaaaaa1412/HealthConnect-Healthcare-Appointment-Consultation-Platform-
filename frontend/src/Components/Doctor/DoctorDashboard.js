@@ -21,10 +21,13 @@ import DoctorPatientChat from "../Chat/DoctorPatientChat";
 import { useAuth } from "../../context/AuthContext";
 import { useDoctorAppointments } from "../../hooks/useAppointments";
 import { useChatPartners } from "../../hooks/useChat";
+import { useToast } from "../../context/ToastContext";
 
 function DoctorDashboard({ user: propUser }) {
   const { user: contextUser } = useAuth();
   const user = propUser || contextUser;
+  const { showSuccess, showError, showWarning } = useToast();
+  const [slotToConfirm, setSlotToConfirm] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [doctorInfo, setDoctorInfo] = useState(user);
   const [slots, setSlots] = useState([]);
@@ -114,9 +117,9 @@ function DoctorDashboard({ user: propUser }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const addSlot = async () => {
+  const addSlot = () => {
     if (!slotDatetime || !slotFee) {
-      alert("Please select a date/time and input a consulting fee.");
+      showWarning("Please select a date/time and input a consulting fee.");
       return;
     }
 
@@ -132,25 +135,26 @@ function DoctorDashboard({ user: propUser }) {
     };
     const formattedDatetime = dateObj.toLocaleDateString('en-IN', options);
 
-    if (!window.confirm(`Are you sure you want to publish this availability slot?\nSlot: ${formattedDatetime}\nFee: ₹${parseFloat(slotFee).toFixed(2)}`)) {
-      return;
-    }
-
     const newSlotObj = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       datetime: formattedDatetime,
       fee: parseFloat(slotFee) || 0.0
     };
 
-    const updatedSlots = [...slots, newSlotObj];
+    setSlotToConfirm(newSlotObj);
+  };
+
+  const executeAddSlot = async (newSlot) => {
+    const updatedSlots = [...slots, newSlot];
     try {
       await doctorService.updateSlots(user.id, updatedSlots);
       setSlots(updatedSlots);
       setSlotDatetime("");
       setSlotFee("");
       fetchDoctorDetails();
+      showSuccess("Availability slot published successfully.");
     } catch (err) {
-      alert("Failed to save schedule slots.");
+      showError("Failed to save schedule slots.");
     }
   };
 
@@ -167,8 +171,9 @@ function DoctorDashboard({ user: propUser }) {
       await doctorService.updateSlots(user.id, updatedSlots);
       setSlots(updatedSlots);
       fetchDoctorDetails();
+      showSuccess("Slot removed successfully.");
     } catch (err) {
-      alert("Failed to remove slot.");
+      showError("Failed to remove slot.");
     }
   };
 
@@ -183,12 +188,13 @@ function DoctorDashboard({ user: propUser }) {
         setClinicSaveSuccess(true);
         setIsEditingClinic(false);
         fetchDoctorDetails();
+        showSuccess("Clinic details saved successfully.");
         setTimeout(() => setClinicSaveSuccess(false), 2500);
       } else {
-        alert(res.error || "Failed to save clinic details.");
+        showError(res.error || "Failed to save clinic details.");
       }
     } catch (err) {
-      alert("Error saving clinic details.");
+      showError("Error saving clinic details.");
     }
   };
 
@@ -269,11 +275,12 @@ function DoctorDashboard({ user: propUser }) {
         await fetchDoctorAppointments();
         await refetchChatPartners();
         await sendConfirmationEmail(res);
+        showSuccess("Appointment approved successfully.");
       } else {
-        alert(res.error || "Failed to approve appointment.");
+        showError(res.error || "Failed to approve appointment.");
       }
     } catch (err) {
-      alert("Error approving appointment.");
+      showError("Error approving appointment.");
     }
   };
 
@@ -285,24 +292,25 @@ function DoctorDashboard({ user: propUser }) {
         if (prescriptionForm.appointmentId === id) {
           setPrescriptionForm({ appointmentId: "", patient: "", drug: "", dosage: "", times: "Once Daily" });
         }
+        showSuccess("Appointment cancelled.");
       } else {
-        alert(res.error || "Failed to cancel appointment.");
+        showError(res.error || "Failed to cancel appointment.");
       }
     } catch (err) {
-      alert("Error cancelling appointment.");
+      showError("Error cancelling appointment.");
     }
   };
 
   const issuePrescription = async (e) => {
     e.preventDefault();
     if (!prescriptionForm.appointmentId) {
-      alert("Please select a booked consultation slot to prescribe for.");
+      showWarning("Please select a booked consultation slot to prescribe for.");
       return;
     }
     
     const targetApp = appointments.find(a => a.id === prescriptionForm.appointmentId);
     if (!targetApp || targetApp.status !== "approved") {
-      alert("Prescriptions can only be issued for approved consultations.");
+      showWarning("Prescriptions can only be issued for approved consultations.");
       return;
     }
 
@@ -318,15 +326,16 @@ function DoctorDashboard({ user: propUser }) {
         setSuccessPre(true);
         fetchDoctorAppointments();
         fetchDoctorDetails();
+        showSuccess("Prescription written successfully.");
         setTimeout(() => {
           setPrescriptionForm({ appointmentId: "", patient: "", drug: "", dosage: "", times: "Once Daily" });
           setSuccessPre(false);
         }, 2000);
       } else {
-        alert(res.error || "Failed to write prescription.");
+        showError(res.error || "Failed to write prescription.");
       }
     } catch (err) {
-      alert("Error submitting prescription.");
+      showError("Error submitting prescription.");
     }
   };
 
@@ -1146,6 +1155,45 @@ function DoctorDashboard({ user: propUser }) {
                 />
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {slotToConfirm && (
+        <div className="modal-overlay" onClick={() => setSlotToConfirm(null)}>
+          <div className="modal-card card" style={{ maxWidth: "400px" }} onClick={(e) => e.stopPropagation()}>
+            <button 
+              className="close-modal-x-btn" 
+              onClick={() => setSlotToConfirm(null)}
+            >
+              &times;
+            </button>
+            <h3 style={{ marginBottom: "1rem" }}>Confirm Slot Publication</h3>
+            <p style={{ fontSize: "0.95rem", color: "var(--text-secondary)", marginBottom: "1.5rem" }}>
+              Are you sure you want to publish this availability slot?
+              <br /><br />
+              <strong>Slot:</strong> {slotToConfirm.datetime}
+              <br />
+              <strong>Fee:</strong> ₹{parseFloat(slotToConfirm.fee).toFixed(2)}
+            </p>
+            <div className="modal-actions" style={{ display: "flex", justifyContent: "flex-end", gap: "1rem" }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setSlotToConfirm(null)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={async () => {
+                  const tempSlot = slotToConfirm;
+                  setSlotToConfirm(null);
+                  await executeAddSlot(tempSlot);
+                }}
+              >
+                Publish Slot
+              </button>
+            </div>
           </div>
         </div>
       )}
