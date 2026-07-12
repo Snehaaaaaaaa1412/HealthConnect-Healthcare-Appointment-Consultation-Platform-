@@ -6,6 +6,9 @@ const env = require("../config/env");
 // In-memory OTP storage: otpToken (UUID) -> { user, otp, expiresAt }
 const otpStore = new Map();
 
+// Cache recently verified tokens for 5 seconds to prevent double-click race conditions
+const recentlyVerifiedStore = new Map();
+
 const otpService = {
   /**
    * Store a new OTP code mapped to a session token.
@@ -57,11 +60,31 @@ const otpService = {
    * @returns {Object|null} User details on success, null on invalid/expired
    */
   verifyOtp: (otpToken, inputOtp) => {
-    const stored = otpService.getStored(otpToken);
-    if (!stored) return null;
+    // If it was recently verified (within 5 seconds), return the user directly to prevent double-click failures
+    if (recentlyVerifiedStore.has(otpToken)) {
+      console.log(`[OTP DEBUG] Duplicate verification request handled for token: ${otpToken}`);
+      return recentlyVerifiedStore.get(otpToken);
+    }
 
-    if (stored.otp === inputOtp) {
+    const stored = otpService.getStored(otpToken);
+    if (!stored) {
+      console.log(`[OTP DEBUG] No stored session found for token: ${otpToken}`);
+      return null;
+    }
+
+    console.log(`[OTP DEBUG] verifying token: ${otpToken}`);
+    console.log(`[OTP DEBUG] stored.otp: "${stored.otp}" (type: ${typeof stored.otp})`);
+    console.log(`[OTP DEBUG] inputOtp: "${inputOtp}" (type: ${typeof inputOtp})`);
+
+    if (String(stored.otp).trim() === String(inputOtp).trim()) {
       otpStore.delete(otpToken); // Consume token immediately
+      
+      // Save in duplicate cache
+      recentlyVerifiedStore.set(otpToken, stored.user);
+      setTimeout(() => {
+        recentlyVerifiedStore.delete(otpToken);
+      }, 5000);
+
       return stored.user;
     }
     return null;
