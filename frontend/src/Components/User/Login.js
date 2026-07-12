@@ -51,6 +51,7 @@ function UserLogin({ onLogin }) {
         setMessage(res.message || res.error || "Invalid credentials");
       }
     } catch (error) {
+      console.error("Login Error:", error);
       setMessage("Login failed. Please check your credentials.");
     } finally {
       setIsLoading(false);
@@ -70,6 +71,7 @@ function UserLogin({ onLogin }) {
         setOtpError(res.error || "Incorrect 6-digit OTP. Please check your email and try again.");
       }
     } catch (err) {
+      console.error("OTP Verification Error:", err);
       setOtpError("Verification failed. Please check your code and try again.");
     } finally {
       setIsOtpSending(false);
