@@ -162,7 +162,7 @@ function DoctorPatientChat({
             messages.map((msg) => {
               const isMine =
                 (currentRole === "doctor" && msg.senderRole === "doctor") ||
-                (currentRole === "patient" && msg.senderRole === "patient");
+                (currentRole === "patient" && (msg.senderRole === "patient" || msg.senderRole === "user"));
               return (
                 <div
                   key={msg.id}

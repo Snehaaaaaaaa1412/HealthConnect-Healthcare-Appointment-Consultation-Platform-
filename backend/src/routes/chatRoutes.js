@@ -9,7 +9,7 @@ const validate = require("../middleware/validationMiddleware");
 const sendChatSchema = {
   doctorUsername: { required: true, minLength: 3 },
   patientUsername: { required: true, minLength: 3 },
-  senderRole: { required: true, enum: ["doctor", "user"] },
+  senderRole: { required: true, enum: ["doctor", "user", "patient"] },
   message: { required: true, minLength: 1 }
 };
 
