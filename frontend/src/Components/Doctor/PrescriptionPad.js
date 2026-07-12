@@ -14,7 +14,7 @@ export default function PrescriptionPad({
   const prescribedApps = appointments.filter(app => app.prescriptionDrug);
 
   return (
-    <div className="dashboard-grid">
+    <div className="dashboard-grid span-12">
       {/* Booked Appointments List */}
       <div className="dashboard-card card span-6">
         <div className="card-header-icon-title">
