@@ -23,10 +23,10 @@ function DoctorLogin({ onLogin }) {
         role: "doctor",
       });
 
-      if (res.data.message === "Login successful") {
-        onLogin(res.data.user, "doctor", res.data.token);
+      if (res.message === "Login successful") {
+        onLogin(res.user, "doctor", res.token);
       } else {
-        setMessage(res.data.message || "Invalid credentials");
+        setMessage(res.message || "Invalid credentials");
       }
     } catch (error) {
       setMessage("Login failed. Please check your credentials.");

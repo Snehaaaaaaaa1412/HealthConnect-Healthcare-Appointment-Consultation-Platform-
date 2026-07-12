@@ -23,10 +23,10 @@ function VendorLogin({ onLogin }) {
         role: "vendor",
       });
 
-      if (res.data.message === "Login successful") {
-        onLogin(res.data.user, "vendor", res.data.token);
+      if (res.message === "Login successful") {
+        onLogin(res.user, "vendor", res.token);
       } else {
-        setMessage(res.data.message || "Invalid credentials");
+        setMessage(res.message || "Invalid credentials");
       }
     } catch (error) {
       setMessage("Login failed. Please check your credentials.");

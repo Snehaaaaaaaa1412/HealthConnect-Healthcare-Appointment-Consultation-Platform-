@@ -23,10 +23,10 @@ function AdminLogin({ onLogin }) {
         role: "admin",
       });
 
-      if (res.data.message === "Login successful") {
-        onLogin(res.data.user, "admin", res.data.token);
+      if (res.message === "Login successful") {
+        onLogin(res.user, "admin", res.token);
       } else {
-        setMessage(res.data.message || "Invalid administrative credentials");
+        setMessage(res.message || "Invalid administrative credentials");
       }
     } catch (error) {
       setMessage("Login failed. Please check your credentials.");
