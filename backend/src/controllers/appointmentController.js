@@ -30,7 +30,7 @@ const appointmentController = {
       symptoms,
       fee,
       medicalReportPath: req.file ? `/uploads/medical_reports/${req.file.filename}` : ""
-    });
+    }, req.user);
 
     res.json(ApiResponse.success(null, result.message || "Appointment booked successfully"));
   }),
@@ -40,7 +40,7 @@ const appointmentController = {
    */
   approveAppointment: asyncHandler(async (req, res) => {
     const { appointmentId } = req.body;
-    const result = await appointmentService.approveAppointment(appointmentId);
+    const result = await appointmentService.approveAppointment(appointmentId, req.user);
     // Return custom success envelope containing the metadata fields directly
     res.json(ApiResponse.success(result));
   }),
@@ -50,7 +50,7 @@ const appointmentController = {
    */
   cancelAppointment: asyncHandler(async (req, res) => {
     const { appointmentId } = req.body;
-    const result = await appointmentService.cancelAppointment(appointmentId);
+    const result = await appointmentService.cancelAppointment(appointmentId, req.user);
     res.json(ApiResponse.success(null, result.message || "Appointment cancelled successfully"));
   }),
 
@@ -59,7 +59,7 @@ const appointmentController = {
    */
   payAppointment: asyncHandler(async (req, res) => {
     const { appointmentId } = req.body;
-    const result = await appointmentService.payAppointment(appointmentId);
+    const result = await appointmentService.payAppointment(appointmentId, req.user);
     res.json(ApiResponse.success(null, result.message || "Payment processed successfully"));
   }),
 
@@ -67,7 +67,7 @@ const appointmentController = {
    * Get list of appointments for a patient
    */
   getPatientAppointments: asyncHandler(async (req, res) => {
-    const appointments = await appointmentService.getPatientAppointments(req.params.username);
+    const appointments = await appointmentService.getPatientAppointments(req.params.username, req.user);
     res.json(ApiResponse.success(appointments));
   }),
 
@@ -75,7 +75,7 @@ const appointmentController = {
    * Get list of appointments for a doctor
    */
   getDoctorAppointments: asyncHandler(async (req, res) => {
-    const appointments = await appointmentService.getDoctorAppointments(req.params.username);
+    const appointments = await appointmentService.getDoctorAppointments(req.params.username, req.user);
     res.json(ApiResponse.success(appointments));
   }),
 
@@ -89,7 +89,7 @@ const appointmentController = {
       drug,
       dosage,
       times
-    });
+    }, req.user);
     res.json(ApiResponse.success(result));
   })
 };

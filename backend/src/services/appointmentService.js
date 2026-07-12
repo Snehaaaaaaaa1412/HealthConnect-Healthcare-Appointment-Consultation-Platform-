@@ -23,7 +23,11 @@ const appointmentService = {
     symptoms,
     fee,
     medicalReportPath
-  }) => {
+  }, currentUser) => {
+    if (currentUser.role !== "admin" && currentUser.username !== patientUsername) {
+      throw new Error("Access denied. You can only book appointments for yourself.");
+    }
+
     const symptomsText = (symptoms || "").trim();
     const symptomsToStore = symptomsText || "Medical report attached";
 
@@ -107,12 +111,17 @@ const appointmentService = {
    * Approve a doctor consultation appointment and compile details for confirmation.
    *
    * @param {number} appointmentId
+   * @param {Object} currentUser
    * @returns {Promise<Object>} The approval receipt details
    */
-  approveAppointment: async (appointmentId) => {
+  approveAppointment: async (appointmentId, currentUser) => {
     const appt = await appointmentRepository.findById(appointmentId);
     if (!appt) {
       throw new Error("Appointment not found");
+    }
+
+    if (currentUser.role !== "admin" && appt.doctorUsername !== currentUser.username) {
+      throw new Error("Access denied. You are not authorized to approve this appointment.");
     }
 
     await appointmentRepository.updateStatus(appointmentId, "approved");
@@ -142,12 +151,20 @@ const appointmentService = {
    * Cancel consultation appointment and release slot back to doctor slots list.
    *
    * @param {number} appointmentId
+   * @param {Object} currentUser
    * @returns {Promise<{ message: string }>}
    */
-  cancelAppointment: async (appointmentId) => {
+  cancelAppointment: async (appointmentId, currentUser) => {
     const appt = await appointmentRepository.findById(appointmentId);
     if (!appt) {
       throw new Error("Appointment not found");
+    }
+
+    const isPatient = currentUser.username === appt.patientUsername;
+    const isDoctor = currentUser.username === appt.doctorUsername;
+    const isAdmin = currentUser.role === "admin";
+    if (!isPatient && !isDoctor && !isAdmin) {
+      throw new Error("Access denied. You are not authorized to cancel this appointment.");
     }
 
     await appointmentRepository.updateStatus(appointmentId, "cancelled");
@@ -180,9 +197,19 @@ const appointmentService = {
    * Mark appointment payment completion.
    *
    * @param {number} appointmentId
+   * @param {Object} currentUser
    * @returns {Promise<{ message: string }>}
    */
-  payAppointment: async (appointmentId) => {
+  payAppointment: async (appointmentId, currentUser) => {
+    const appt = await appointmentRepository.findById(appointmentId);
+    if (!appt) {
+      throw new Error("Appointment not found");
+    }
+
+    if (currentUser.role !== "admin" && appt.patientUsername !== currentUser.username) {
+      throw new Error("Access denied. You are not authorized to pay for this appointment.");
+    }
+
     await appointmentRepository.updatePaymentStatus(appointmentId, "Successful");
     return { message: "Payment processed successfully" };
   },
@@ -191,9 +218,13 @@ const appointmentService = {
    * Get patient appointments list.
    *
    * @param {string} username
+   * @param {Object} currentUser
    * @returns {Promise<Array>}
    */
-  getPatientAppointments: async (username) => {
+  getPatientAppointments: async (username, currentUser) => {
+    if (currentUser.role !== "admin" && currentUser.username !== username) {
+      throw new Error("Access denied. You can only view your own appointments.");
+    }
     return appointmentRepository.findByPatient(username);
   },
 
@@ -201,9 +232,13 @@ const appointmentService = {
    * Get doctor appointments list.
    *
    * @param {string} username
+   * @param {Object} currentUser
    * @returns {Promise<Array>}
    */
-  getDoctorAppointments: async (username) => {
+  getDoctorAppointments: async (username, currentUser) => {
+    if (currentUser.role !== "admin" && currentUser.username !== username) {
+      throw new Error("Access denied. You can only view your own appointments.");
+    }
     return appointmentRepository.findByDoctor(username);
   },
 
@@ -211,17 +246,22 @@ const appointmentService = {
    * Submit prescription details and payout held consultation fee to doctor balance.
    *
    * @param {Object} prescriptionData
+   * @param {Object} currentUser
    * @returns {Promise<Object>} Payout receipt details
    */
-  prescribeAppointment: async ({ appointmentId, drug, dosage, times }) => {
+  prescribeAppointment: async ({ appointmentId, drug, dosage, times }, currentUser) => {
+    const appt = await appointmentRepository.findById(appointmentId);
+    if (!appt) {
+      throw new Error("Appointment not found");
+    }
+
+    if (currentUser.role !== "admin" && appt.doctorUsername !== currentUser.username) {
+      throw new Error("Access denied. You are not authorized to write prescriptions for this appointment.");
+    }
+
     await dbRun("BEGIN IMMEDIATE TRANSACTION");
 
     try {
-      const appt = await appointmentRepository.findById(appointmentId);
-      if (!appt) {
-        throw new Error("Appointment not found");
-      }
-
       if (appt.prescriptionDrug) {
         throw new Error("Prescription has already been written for this consultation");
       }

@@ -29,7 +29,7 @@ const orderController = {
       items,
       totalAmount,
       address
-    });
+    }, req.user);
 
     res.json(ApiResponse.success(result));
   }),
@@ -38,7 +38,7 @@ const orderController = {
    * Get patient order history
    */
   getPatientOrders: asyncHandler(async (req, res) => {
-    const orders = await orderService.getPatientOrders(req.params.username);
+    const orders = await orderService.getPatientOrders(req.params.username, req.user);
     res.json(ApiResponse.success(orders));
   }),
 
@@ -46,7 +46,7 @@ const orderController = {
    * Get vendor order history
    */
   getVendorOrders: asyncHandler(async (req, res) => {
-    const orders = await orderService.getVendorOrders(req.params.vendorId);
+    const orders = await orderService.getVendorOrders(parseInt(req.params.vendorId), req.user);
     res.json(ApiResponse.success(orders));
   }),
 
@@ -55,7 +55,7 @@ const orderController = {
    */
   dispatchOrder: asyncHandler(async (req, res) => {
     const { orderId } = req.body;
-    const result = await orderService.dispatchOrder(orderId);
+    const result = await orderService.dispatchOrder(orderId, req.user);
     res.json(ApiResponse.success(null, result.message || "Order dispatched successfully"));
   }),
 
@@ -64,7 +64,7 @@ const orderController = {
    */
   receiveOrder: asyncHandler(async (req, res) => {
     const { orderId } = req.body;
-    const result = await orderService.receiveOrder(orderId);
+    const result = await orderService.receiveOrder(orderId, req.user);
     res.json(ApiResponse.success(null, result.message || "Order received successfully"));
   })
 };

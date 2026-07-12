@@ -25,6 +25,15 @@ const { dbGet, dbAll, dbRun } = require("../utils/dbHelpers");
 
 const orderRepository = {
   /**
+   * Find a single order by primary key.
+   *
+   * @param {number} id
+   * @returns {Promise<Object|null>}
+   */
+  findById: (id) =>
+    dbGet("SELECT * FROM orders WHERE id = ?", [id]),
+
+  /**
    * All orders for a specific patient, newest first.
    *
    * @param {string} username

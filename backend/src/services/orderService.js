@@ -20,7 +20,11 @@ const orderService = {
     items,
     totalAmount,
     address
-  }) => {
+  }, currentUser) => {
+    if (currentUser.role !== "admin" && currentUser.username !== patientUsername) {
+      throw new Error("Access denied. You can only place orders for yourself.");
+    }
+
     const numericAmount = parseFloat(totalAmount) || 0.0;
     const platformCut = numericAmount * 0.10; // 10% Platform Commission
     const vendorPayout = numericAmount * 0.90; // 90% Vendor split balance increment
@@ -61,9 +65,13 @@ const orderService = {
    * Get list of orders for a patient.
    *
    * @param {string} username
+   * @param {Object} currentUser
    * @returns {Promise<Array>}
    */
-  getPatientOrders: async (username) => {
+  getPatientOrders: async (username, currentUser) => {
+    if (currentUser.role !== "admin" && currentUser.username !== username) {
+      throw new Error("Access denied. You can only view your own orders.");
+    }
     return orderRepository.findByPatient(username);
   },
 
@@ -71,9 +79,13 @@ const orderService = {
    * Get list of orders for a vendor store.
    *
    * @param {number} vendorId
+   * @param {Object} currentUser
    * @returns {Promise<Array>}
    */
-  getVendorOrders: async (vendorId) => {
+  getVendorOrders: async (vendorId, currentUser) => {
+    if (currentUser.role !== "admin" && currentUser.id !== vendorId) {
+      throw new Error("Access denied. You can only view your own store's orders.");
+    }
     return orderRepository.findByVendor(vendorId);
   },
 
@@ -81,9 +93,19 @@ const orderService = {
    * Dispatch an order.
    *
    * @param {number} orderId
+   * @param {Object} currentUser
    * @returns {Promise<{ message: string }>}
    */
-  dispatchOrder: async (orderId) => {
+  dispatchOrder: async (orderId, currentUser) => {
+    const order = await orderRepository.findById(orderId);
+    if (!order) {
+      throw new Error("Order not found");
+    }
+
+    if (currentUser.role !== "admin" && currentUser.id !== order.vendorId) {
+      throw new Error("Access denied. You are not authorized to dispatch this order.");
+    }
+
     await orderRepository.updateStatus(orderId, "Dispatched");
     return { message: "Order dispatched successfully" };
   },
@@ -92,9 +114,19 @@ const orderService = {
    * Receive/deliver an order.
    *
    * @param {number} orderId
+   * @param {Object} currentUser
    * @returns {Promise<{ message: string }>}
    */
-  receiveOrder: async (orderId) => {
+  receiveOrder: async (orderId, currentUser) => {
+    const order = await orderRepository.findById(orderId);
+    if (!order) {
+      throw new Error("Order not found");
+    }
+
+    if (currentUser.role !== "admin" && currentUser.username !== order.patientUsername) {
+      throw new Error("Access denied. You are not authorized to receive this order.");
+    }
+
     await orderRepository.updateStatus(orderId, "Received");
     return { message: "Order received successfully" };
   }
