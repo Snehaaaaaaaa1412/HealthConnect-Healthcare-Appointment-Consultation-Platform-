@@ -30,23 +30,23 @@ export default function InventoryManager({
         <div className="dossier-list">
           <div className="dossier-item">
             <span className="label">Registered Store Name</span>
-            <span className="value">{vendorInfo.storeName || storeName}</span>
+            <span className="value">{vendorInfo?.storeName || storeName}</span>
           </div>
           <div className="dossier-item">
             <span className="label">Merchant Proprietor</span>
-            <span className="value">{vendorInfo.fullName || user.fullName}</span>
+            <span className="value">{vendorInfo?.fullName || user.fullName}</span>
           </div>
           <div className="dossier-item">
             <span className="label">Contact Mobile</span>
-            <span className="value">{vendorInfo.mobile || user.mobile}</span>
+            <span className="value">{vendorInfo?.mobile || user.mobile}</span>
           </div>
           <div className="dossier-item">
             <span className="label">Statutory ID</span>
-            <span className="value">RX-{vendorInfo.id || user.id}</span>
+            <span className="value">RX-{vendorInfo?.id || user.id}</span>
           </div>
           <div className="dossier-item" style={{ borderTop: "1px solid var(--border-color)", paddingTop: "0.75rem", marginTop: "0.5rem" }}>
             <span className="label" style={{ fontWeight: "700", color: "var(--accent-bronze)" }}>Digital Wallet Balance</span>
-            <span className="value" style={{ fontWeight: "700", color: "var(--accent-bronze)" }}>₹{(vendorInfo.balance || 0.0).toFixed(2)}</span>
+            <span className="value" style={{ fontWeight: "700", color: "var(--accent-bronze)" }}>₹{(vendorInfo?.balance || 0.0).toFixed(2)}</span>
           </div>
         </div>
       </div>
