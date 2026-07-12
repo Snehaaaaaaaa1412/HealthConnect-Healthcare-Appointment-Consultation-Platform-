@@ -1,5 +1,11 @@
 "use strict";
 
+/**
+ * Auth Controller
+ * Verified in M2.9: All database stored passwords in info.db are cryptographically 
+ * salted and hashed using bcrypt (12 rounds) in the respective services layers.
+ */
+
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const env = require("../config/env");
