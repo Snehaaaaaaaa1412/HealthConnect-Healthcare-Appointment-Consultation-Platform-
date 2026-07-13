@@ -1,6 +1,6 @@
 # HealthConnect — Full-Stack Healthcare Booking, Chat & Sandboxed AI Triage Platform
 
-HealthConnect is a production-ready, full-stack medical consulting and appointment booking platform built to match industry-standard SaaS architectures. Designed as a high-performance system for software engineering placements, it decodes complex business requirements (pessimistic slot leasing, secure escrow payment states, OCR document processing, and real-time medical chat context) into a modular, containerized multi-tier ecosystem.
+HealthConnect is a production-grade, full-stack medical consulting and appointment booking platform built to match industry-standard SaaS architectures. Designed as a high-performance system for software engineering placements, it decodes complex business requirements (pessimistic slot leasing, secure escrow payment states, OCR document processing, and real-time medical chat context) into a modular, containerized multi-tier ecosystem.
 
 ---
 
@@ -9,6 +9,62 @@ HealthConnect is a production-ready, full-stack medical consulting and appointme
 * **Live Frontend Website**: [https://healthconnect-app-eta.vercel.app](https://healthconnect-app-eta.vercel.app)
 * **Live API Backend Gateway**: [https://healthconnect-healthcare-appointment-consultatio-production.up.railway.app](https://healthconnect-healthcare-appointment-consultatio-production.up.railway.app)
 * **Live OCR & AI Triage Microservice**: [https://healthconnect-ocr-service-production.up.railway.app](https://healthconnect-ocr-service-production.up.railway.app)
+
+---
+
+## 🏗️ System Architecture & Data Flow
+
+HealthConnect uses a microservice-based architecture designed for high availability, clean separation of concerns, and decoupled scalability.
+
+### Architecture Topology Map
+
+```text
+                                  +------------------------------------+
+                                  |      Client Browser / React SPA    |
+                                  |      (Deployed on Vercel CDN)      |
+                                  +------------------------------------+
+                                     /                              \
+                      (HTTPS / JSON)/                                \ (HTTPS / Multipart Form)
+                                   v                                  v
+       +------------------------------------+        +------------------------------------+
+       |       Express API Gateway          |        |       Flask OCR Microservice       |
+       |       (Deployed on Railway)        |        |       (Deployed on Railway)        |
+       +------------------------------------+        +------------------------------------+
+           /                  |           \                             |
+   (SQL)  /                   |            \ (Upload File)              | (Scan / OCR parsing)
+         v                    v             v                           v
+  +--------------+    +--------------+    +--------------+      +--------------+
+  | Neon Cloud   |    | Local Disk   |    | Cloudinary   |      | Tesseract    |
+  | PostgreSQL   |    | SQLite file  |    | CDN Storage  |      | OCR Engine   |
+  | (Production) |    | (Dev Mode)   |    | (Production) |      | (Sandboxed)  |
+  +--------------+    +--------------+    +--------------+      +--------------+
+```
+
+### System Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Patient as Patient (Client Browser)
+    participant Vercel as Frontend (Vercel)
+    participant NodeAPI as API Gateway (Node/Express)
+    participant FlaskOCR as OCR Service (Python)
+    participant Cloudinary as CDN (Cloudinary)
+    participant Database as Database (Neon PostgreSQL)
+
+    Patient->>Vercel: Open Dashboard & Upload Document
+    Vercel->>FlaskOCR: POST /triage (Medical PDF / Image)
+    FlaskOCR->>FlaskOCR: Run PDF / Tesseract Parsing
+    FlaskOCR-->>Vercel: Return Speciality Suggestion (e.g. Cardiology)
+    Patient->>Vercel: Submit Booking Request (Slot, Symptoms)
+    Vercel->>NodeAPI: POST /appointments/book (Auth Bearer Token)
+    NodeAPI->>Database: BEGIN IMMEDIATE TRANSACTION
+    NodeAPI->>Database: Lease check & reserve slot (10 min lease)
+    NodeAPI->>Cloudinary: Upload staging file to CDN
+    Cloudinary-->>NodeAPI: Return secure file URL
+    NodeAPI->>Database: Store appointment record & COMMIT
+    NodeAPI-->>Vercel: Booking Confirmation
+```
 
 ---
 
@@ -33,7 +89,7 @@ HealthConnect is a production-ready, full-stack medical consulting and appointme
 
 ---
 
-## 💎 Core Architecture & Placement Highlights
+## 💎 Core Architectural & Placement Highlights
 
 ### 1. Pessimistic Slot Leasing (Anti-Double Booking)
 To prevent two patients from booking the same doctor's slot simultaneously, the service layer implements a database-level transaction lock (`BEGIN IMMEDIATE TRANSACTION`). Upon slot selection, the slot is leased to the patient for 10 minutes. A background cron worker periodically scans the database every 30 seconds to release expired slot locks (`createdAt < NOW() - INTERVAL '10 minutes'`) if the checkout payment has not been completed.
