@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import requests
 import pytesseract
@@ -7,8 +8,9 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pypdf
 
-# Set Tesseract-OCR path on the local Windows system
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# Set Tesseract-OCR path conditionally based on operating system
+if sys.platform.startswith('win'):
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS to allow cross-origin requests from frontend (port 3001)
