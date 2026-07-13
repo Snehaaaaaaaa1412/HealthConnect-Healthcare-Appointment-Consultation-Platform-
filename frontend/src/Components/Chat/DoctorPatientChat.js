@@ -140,7 +140,7 @@ function DoctorPatientChat({
           {hasReport && (
             <div className="chat-context-row">
               <a
-                href={`${process.env.REACT_APP_API_BASE_URL || "http://localhost:5000"}${context.medicalReportPath}`}
+                href={context.medicalReportPath.startsWith("http") ? context.medicalReportPath : `${process.env.REACT_APP_API_BASE_URL || "http://localhost:5000"}${context.medicalReportPath}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-secondary btn-xs"

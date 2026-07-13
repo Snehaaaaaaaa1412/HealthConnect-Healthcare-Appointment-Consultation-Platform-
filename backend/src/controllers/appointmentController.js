@@ -3,6 +3,7 @@
 const appointmentService = require("../services/appointmentService");
 const asyncHandler = require("../utils/asyncHandler");
 const ApiResponse = require("../utils/ApiResponse");
+const { uploadToCloudinary } = require("../utils/cloudinaryHelper");
 
 const appointmentController = {
   /**
@@ -20,6 +21,16 @@ const appointmentController = {
       fee
     } = req.body;
 
+    let medicalReportPath = "";
+    if (req.file) {
+      const cloudinaryUrl = await uploadToCloudinary(req.file.path);
+      if (cloudinaryUrl) {
+        medicalReportPath = cloudinaryUrl;
+      } else {
+        medicalReportPath = `/uploads/medical_reports/${req.file.filename}`;
+      }
+    }
+
     const result = await appointmentService.bookAppointment({
       patientUsername,
       patientFullName,
@@ -29,7 +40,7 @@ const appointmentController = {
       slot,
       symptoms,
       fee,
-      medicalReportPath: req.file ? `/uploads/medical_reports/${req.file.filename}` : ""
+      medicalReportPath
     }, req.user);
 
     res.json(ApiResponse.success(null, result.message || "Appointment booked successfully"));

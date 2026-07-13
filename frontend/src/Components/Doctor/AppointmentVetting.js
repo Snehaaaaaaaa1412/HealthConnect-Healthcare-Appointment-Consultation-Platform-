@@ -62,7 +62,7 @@ export default function AppointmentVetting({
                     <td>
                       {app.medicalReportPath ? (
                         <a
-                          href={`${process.env.REACT_APP_API_BASE_URL || "http://localhost:5000"}${app.medicalReportPath}`}
+                          href={app.medicalReportPath.startsWith("http") ? app.medicalReportPath : `${process.env.REACT_APP_API_BASE_URL || "http://localhost:5000"}${app.medicalReportPath}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-secondary btn-xs"
