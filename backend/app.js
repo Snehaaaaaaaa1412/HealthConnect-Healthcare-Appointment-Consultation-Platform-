@@ -22,13 +22,18 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const path = require("path");
 
+const env = require("./src/config/env");
+
 const app = express();
 
 // ─────────────────────────────────────────────────────────────
 // Core Middleware
 // ─────────────────────────────────────────────────────────────
 
-app.use(cors());
+app.use(cors({
+  origin: env.CORS_ORIGIN || "*",
+  credentials: true
+}));
 app.use(bodyParser.json());
 
 // Serve uploaded medical report files as static assets.
