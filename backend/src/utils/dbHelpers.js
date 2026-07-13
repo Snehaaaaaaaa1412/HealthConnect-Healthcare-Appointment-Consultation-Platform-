@@ -1,84 +1,106 @@
 "use strict";
 
 /**
- * Database Helper Utilities — Promise wrappers for sqlite3
+ * Database Helper Utilities — Promise wrappers supporting SQLite & PostgreSQL
  *
- * WHY THIS EXISTS:
- *   sqlite3 for Node.js uses a callback-based API. Every repository
- *   function in this project needs to return a Promise so the service
- *   layer can use async/await cleanly without nested callbacks.
- *
- *   These three helpers are the ONLY place in the codebase that
- *   converts sqlite3 callbacks to Promises. All repository modules
- *   import from here — zero callback code leaks into business logic.
- *
- * USAGE (in any repository):
- *   const { dbGet, dbAll, dbRun } = require("../utils/dbHelpers");
- *
- *   const user = await dbGet("SELECT * FROM users WHERE id = ?", [id]);
- *   const rows  = await dbAll("SELECT * FROM users", []);
- *   const { lastID } = await dbRun("INSERT INTO users ...", [...]);
- *
- * TRANSACTION MANAGEMENT:
- *   Services that need atomic transactions should import db directly
- *   from src/config/database and use db.serialize() with BEGIN/COMMIT.
- *   Individual repository methods are designed to work both inside
- *   and outside transaction boundaries.
+ * Responsibility:
+ *   Convert callback-based SQLite APIs and Promise-based PostgreSQL queries
+ *   into a unified interface so the rest of the Repository layer can run
+ *   the exact same function calls regardless of DB environment.
  */
 
 const db = require("../config/database");
 
+const isPostgres = !!process.env.DATABASE_URL;
+
+/**
+ * Translate SQLite '?' parameter placeholders to PostgreSQL '$1', '$2', '$3' placeholders.
+ * E.g., "SELECT * FROM users WHERE id = ? AND role = ?" 
+ *    → "SELECT * FROM users WHERE id = $1 AND role = $2"
+ */
+function translateSql(sql) {
+  let cleanSql = sql;
+  if (isPostgres) {
+    const upper = sql.trim().toUpperCase();
+    if (upper === "BEGIN IMMEDIATE TRANSACTION" || upper === "BEGIN TRANSACTION") {
+      cleanSql = "BEGIN";
+    }
+    // Handle SQLite datetime function fallback translation for expired locks check
+    if (cleanSql.includes("datetime(createdAt) < datetime('now', '-10 minutes')")) {
+      cleanSql = cleanSql.replace(
+        "datetime(createdAt) < datetime('now', '-10 minutes')",
+        "createdAt < NOW() - INTERVAL '10 minutes'"
+      );
+    }
+  }
+  let index = 1;
+  return cleanSql.replace(/\?/g, () => `$${index++}`);
+}
+
 /**
  * Execute a SELECT that returns at most one row.
  * Resolves to the row object, or null if not found.
- *
- * @param {string} sql    - Parameterised SQL query
- * @param {Array}  params - Bound parameter values
- * @returns {Promise<Object|null>}
  */
-const dbGet = (sql, params = []) =>
-  new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row || null);
+const dbGet = (sql, params = []) => {
+  if (isPostgres) {
+    const pgSql = translateSql(sql);
+    return db.query(pgSql, params).then((res) => res.rows[0] || null);
+  } else {
+    return new Promise((resolve, reject) => {
+      db.get(sql, params, (err, row) => {
+        if (err) reject(err);
+        else resolve(row || null);
+      });
     });
-  });
+  }
+};
 
 /**
  * Execute a SELECT that returns multiple rows.
- * Resolves to an array (empty array if no rows found — never null).
- *
- * @param {string} sql    - Parameterised SQL query
- * @param {Array}  params - Bound parameter values
- * @returns {Promise<Array>}
+ * Resolves to an array (empty array if no rows found).
  */
-const dbAll = (sql, params = []) =>
-  new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows || []);
+const dbAll = (sql, params = []) => {
+  if (isPostgres) {
+    const pgSql = translateSql(sql);
+    return db.query(pgSql, params).then((res) => res.rows || []);
+  } else {
+    return new Promise((resolve, reject) => {
+      db.all(sql, params, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
     });
-  });
+  }
+};
 
 /**
  * Execute an INSERT, UPDATE, or DELETE statement.
  * Resolves with { lastID, changes } — the ID of the last inserted row
  * and the number of rows affected.
- *
- * NOTE: Uses a regular function (not arrow function) for the callback
- * so `this.lastID` and `this.changes` are accessible from sqlite3's
- * Statement context.
- *
- * @param {string} sql    - Parameterised SQL statement
- * @param {Array}  params - Bound parameter values
- * @returns {Promise<{ lastID: number, changes: number }>}
  */
-const dbRun = (sql, params = []) =>
-  new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve({ lastID: this.lastID, changes: this.changes });
+const dbRun = (sql, params = []) => {
+  if (isPostgres) {
+    let querySql = sql;
+    const isInsert = sql.trim().toUpperCase().startsWith("INSERT");
+    
+    // Automatically append RETURNING id for PostgreSQL INSERTs to retrieve lastID compatibility
+    if (isInsert && !sql.toUpperCase().includes("RETURNING")) {
+      querySql += " RETURNING id";
+    }
+    
+    const pgSql = translateSql(querySql);
+    return db.query(pgSql, params).then((res) => {
+      const lastID = isInsert && res.rows[0] ? res.rows[0].id : null;
+      return { lastID, changes: res.rowCount };
     });
-  });
+  } else {
+    return new Promise((resolve, reject) => {
+      db.run(sql, params, function (err) {
+        if (err) reject(err);
+        else resolve({ lastID: this.lastID, changes: this.changes });
+      });
+    });
+  }
+};
 
 module.exports = { dbGet, dbAll, dbRun };
