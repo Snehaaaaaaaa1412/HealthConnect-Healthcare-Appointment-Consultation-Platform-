@@ -1,0 +1,61 @@
+services:
+  # Python Flask OCR & Triage Service
+  - type: web
+    name: healthconnect-ocr
+    env: docker
+    dockerfilePath: ocr_service/Dockerfile
+    dockerContext: ocr_service
+    plan: free
+    envVars:
+      - key: OLLAMA_URL
+        value: http://localhost:11434 # In production, this should point to a hosted LLM API or custom deployment
+
+  # Node.js API Backend Gateway
+  - type: web
+    name: healthconnect-backend
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /app/data/info.db
+      - key: JWT_SECRET
+        generateValue: true # Render will automatically generate a cryptographically secure random key
+      - key: EMAIL_USER
+        sync: false # User must provide their own Gmail SMTP user in the dashboard
+      - key: EMAIL_APP_PASSWORD
+        sync: false # User must provide their Gmail App Password
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        value: admin
+    # Attach persistent disk to ensure SQLite database and medical upload files are not lost on restarts
+    disk:
+      name: database-disk
+      mountPath: /app/data
+      sizeGB: 1
+
+  # React Frontend (Static Site Web Server)
+  - type: web
+    name: healthconnect-frontend
+    env: docker
+    dockerfilePath: frontend/Dockerfile
+    dockerContext: frontend
+    plan: free
+    # Build time arguments to inject public backend URLs into React index bundle
+    envVars:
+      - key: REACT_APP_API_BASE_URL
+        fromService:
+          name: healthconnect-backend
+          type: web
+          property: host
+      - key: REACT_APP_OCR_BASE_URL
+        fromService:
+          name: healthconnect-ocr
+          type: web
+          property: host
