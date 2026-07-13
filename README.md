@@ -1,5 +1,11 @@
 # HealthConnect — Full-Stack Healthcare Booking, Chat & Sandboxed AI Triage Platform
 
+[![Vercel Frontend Live](https://img.shields.io/badge/Vercel-Frontend--Live-brightgreen?logo=vercel&logoColor=white)](https://healthconnect-app-eta.vercel.app)
+[![Railway Backend Live](https://img.shields.io/badge/Railway-Backend--API--Live-blueviolet?logo=railway&logoColor=white)](https://healthconnect-healthcare-appointment-consultatio-production.up.railway.app)
+[![Railway OCR Live](https://img.shields.io/badge/Railway-OCR--Microservice--Live-blueviolet?logo=railway&logoColor=white)](https://healthconnect-ocr-service-production.up.railway.app)
+[![Neon Database](https://img.shields.io/badge/Database-Neon--Postgres--Cloud-blue?logo=postgresql&logoColor=white)](https://neon.tech)
+[![Cloudinary CDN](https://img.shields.io/badge/Storage-Cloudinary--CDN-cyan?logo=cloudinary&logoColor=white)](https://cloudinary.com)
+
 HealthConnect is a production-grade, full-stack medical consulting and appointment booking platform built to match industry-standard SaaS architectures. Designed as a high-performance system for software engineering placements, it decodes complex business requirements (pessimistic slot leasing, secure escrow payment states, OCR document processing, and real-time medical chat context) into a modular, containerized multi-tier ecosystem.
 
 ---
