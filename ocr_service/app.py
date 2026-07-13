@@ -41,6 +41,17 @@ def extract_text_from_image(file_path):
         print(f"Error running OCR on image {file_path}: {e}")
         return ""
 
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({
+        'status': 'UP',
+        'service': 'OCR & Triage Microservice API',
+        'endpoints': {
+            '/extract-text': 'POST (multipart/form-data)',
+            '/triage': 'POST (application/json)'
+        }
+    })
+
 @app.route('/extract-text', methods=['POST'])
 def handle_extract_text():
     if 'file' not in request.files:
