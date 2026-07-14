@@ -13,6 +13,43 @@ const db = require("../config/database");
 
 const isPostgres = !!process.env.DATABASE_URL;
 
+// Case-mapping directory to convert lowercase PostgreSQL results back to camelCase
+const keyMappings = {
+  fullname: 'fullName',
+  clinictiming: 'clinicTiming',
+  clinicaddress: 'clinicAddress',
+  consultationavailability: 'consultationAvailability',
+  storename: 'storeName',
+  escrowstatus: 'escrowStatus',
+  paymentstatus: 'paymentStatus',
+  prescriptiondrug: 'prescriptionDrug',
+  prescriptiondosage: 'prescriptionDosage',
+  prescriptionregimen: 'prescriptionRegimen',
+  medicalreportpath: 'medicalReportPath',
+  createdat: 'createdAt',
+  doctorusername: 'doctorUsername',
+  doctorfullname: 'doctorFullName',
+  patientusername: 'patientUsername',
+  patientfullname: 'patientFullName',
+  sendermobile: 'senderMobile',
+  senderrole: 'senderRole',
+  senderusername: 'senderUsername',
+  vendorid: 'vendorId',
+  vendorstorename: 'vendorStoreName',
+  vendorphone: 'vendorPhone',
+  totalamount: 'totalAmount'
+};
+
+function normalizeRow(row) {
+  if (!row) return row;
+  const newRow = {};
+  for (const [key, val] of Object.entries(row)) {
+    const mappedKey = keyMappings[key] || key;
+    newRow[mappedKey] = val;
+  }
+  return newRow;
+}
+
 /**
  * Translate SQLite '?' parameter placeholders to PostgreSQL '$1', '$2', '$3' placeholders.
  * E.g., "SELECT * FROM users WHERE id = ? AND role = ?" 
@@ -44,12 +81,12 @@ function translateSql(sql) {
 const dbGet = (sql, params = []) => {
   if (isPostgres) {
     const pgSql = translateSql(sql);
-    return db.query(pgSql, params).then((res) => res.rows[0] || null);
+    return db.query(pgSql, params).then((res) => normalizeRow(res.rows[0]) || null);
   } else {
     return new Promise((resolve, reject) => {
       db.get(sql, params, (err, row) => {
         if (err) reject(err);
-        else resolve(row || null);
+        else resolve(normalizeRow(row) || null);
       });
     });
   }
@@ -62,12 +99,12 @@ const dbGet = (sql, params = []) => {
 const dbAll = (sql, params = []) => {
   if (isPostgres) {
     const pgSql = translateSql(sql);
-    return db.query(pgSql, params).then((res) => res.rows || []);
+    return db.query(pgSql, params).then((res) => (res.rows || []).map(normalizeRow));
   } else {
     return new Promise((resolve, reject) => {
       db.all(sql, params, (err, rows) => {
         if (err) reject(err);
-        else resolve(rows || []);
+        else resolve((rows || []).map(normalizeRow));
       });
     });
   }
