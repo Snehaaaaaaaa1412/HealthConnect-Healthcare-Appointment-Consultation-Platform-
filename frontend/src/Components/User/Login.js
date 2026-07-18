@@ -99,6 +99,35 @@ function UserLogin({ onLogin }) {
     }
   };
 
+  const handleGuestLogin = () => {
+    setUsername("demo_patient");
+    setPassword("demo123");
+    setIsLoading(true);
+    setMessage("");
+
+    authService.login({
+      username: "demo_patient",
+      password: "demo123",
+      role: "user"
+    }).then(res => {
+      if (res.requiresOTP) {
+        setGeneratedOtp(res.otpToken);
+        setTempUser({ email: res.email });
+        setShowOtpModal(true);
+        setResendCountdown(30);
+        setInputOtp("123456"); // Pre-fill with master bypass code!
+        setOtpError("");
+      } else {
+        setMessage(res.message || res.error || "Invalid credentials");
+      }
+    }).catch(err => {
+      console.error(err);
+      setMessage("Demo login failed.");
+    }).finally(() => {
+      setIsLoading(false);
+    });
+  };
+
   return (
     <div className="login-container">
       <div className="login-card card">
@@ -150,6 +179,21 @@ function UserLogin({ onLogin }) {
             {isLoading ? "Logging in..." : "Log In as Patient"}
           </button>
         </form>
+
+        <div className="demo-credentials-box" style={{ marginTop: "1.25rem", borderTop: "1px dashed #cbd5e1", paddingTop: "1rem", textAlign: "center" }}>
+          <p style={{ margin: "0 0 0.5rem 0", color: "#64748b", fontSize: "0.8rem" }}>
+            Quick Interview Demo Check:
+          </p>
+          <button 
+            type="button" 
+            className="btn btn-secondary btn-full btn-sm" 
+            onClick={handleGuestLogin}
+            disabled={isLoading}
+            style={{ background: "#f1f5f9", color: "#334155", border: "1px solid #cbd5e1", width: "100%", padding: "0.4rem" }}
+          >
+            One-Click Login as Demo Patient
+          </button>
+        </div>
 
         <div className="login-footer">
           <p>Don't have a patient account?</p>
