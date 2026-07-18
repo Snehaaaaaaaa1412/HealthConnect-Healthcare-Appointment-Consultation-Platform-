@@ -112,8 +112,8 @@ function VendorLogin({ onLogin }) {
         </form>
 
         <div className="demo-credentials-box" style={{ marginTop: "1.25rem", borderTop: "1px dashed #cbd5e1", paddingTop: "1rem", textAlign: "center" }}>
-          <p style={{ margin: "0 0 0.5rem 0", color: "#64748b", fontSize: "0.8rem" }}>
-            Quick Interview Demo Check:
+          <p style={{ margin: "0 0 0.5rem 0", color: "#64748b", fontSize: "0.85rem", fontWeight: "600" }}>
+            Take Demo:
           </p>
           <button 
             type="button" 
