@@ -23,22 +23,15 @@ services:
       - key: NODE_ENV
         value: production
       - key: DB_PATH
-        value: /app/data/info.db
+        value: info.db
       - key: JWT_SECRET
-        generateValue: true # Render will automatically generate a cryptographically secure random key
-      - key: EMAIL_USER
-        sync: false # User must provide their own Gmail SMTP user in the dashboard
-      - key: EMAIL_APP_PASSWORD
-        sync: false # User must provide their Gmail App Password
+        generateValue: true
       - key: ADMIN_USERNAME
         value: admin
       - key: ADMIN_PASSWORD
         value: admin
-    # Attach persistent disk to ensure SQLite database and medical upload files are not lost on restarts
-    disk:
-      name: database-disk
-      mountPath: /app/data
-      sizeGB: 1
+
+
 
   # React Frontend (Static Site Web Server)
   - type: web
