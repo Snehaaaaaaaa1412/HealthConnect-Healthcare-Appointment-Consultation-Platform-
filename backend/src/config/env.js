@@ -55,15 +55,15 @@ const env = {
   // ─────────────────────────────────────────────────────────────
   EMAIL_HOST: process.env.EMAIL_HOST || "smtp.gmail.com",
   EMAIL_PORT: parseInt(process.env.EMAIL_PORT, 10) || 587,
-  EMAIL_USER: process.env.EMAIL_USER || "",
-  EMAIL_APP_PASSWORD: process.env.EMAIL_APP_PASSWORD || "",
+  EMAIL_USER: process.env.EMAIL_USER || "demo.healthconnect@gmail.com",
+  EMAIL_APP_PASSWORD: process.env.EMAIL_APP_PASSWORD || "demo_password",
   EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || "HealthConnect",
 
   // ─────────────────────────────────────────────────────────────
   // CORS / Frontend
   // ─────────────────────────────────────────────────────────────
   FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:3000",
-  CORS_ORIGIN: process.env.CORS_ORIGIN || "http://localhost:3000",
+  CORS_ORIGIN: process.env.CORS_ORIGIN || "*",
 
   // ─────────────────────────────────────────────────────────────
   // External Services
@@ -87,8 +87,6 @@ const env = {
 if (env.NODE_ENV === "production") {
   const required = [
     "JWT_SECRET",
-    "EMAIL_USER",
-    "EMAIL_APP_PASSWORD",
     "DB_PATH",
   ];
   const missing = required.filter(
